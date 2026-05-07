@@ -329,7 +329,7 @@ SHADER_NAME_PATTERNS_SCORED: list[tuple[re.Pattern[str], str, int]] = [
     # --------------------------------------------------------------------------
     # These are common in compound names and shouldn't override more specific
     # technical terms. "Dirt_Leaves_Triplanar" should use polygon, not foliage.
-    (re.compile(r"(?i)(tree|fern|grass|vine|branch|willow|bush|shrub|hedge|bamboo|koru|treefern)"), "foliage.gdshader", 25),
+    (re.compile(r"(?i)(tree|fern|grass|vine|branch|willow|bush|shrub|hedge|bamboo|koru|treefern|flower|sunflower|wildflower|cropfield|crop|cover|card_|kite|leaves)"), "foliage.gdshader", 25),
     (re.compile(r"(?i)(leaf|leaves)"), "foliage.gdshader", 20),  # Very common, low priority
     (re.compile(r"(?i)(bark|trunk|undergrowth|plant)"), "foliage.gdshader", 20),
 
