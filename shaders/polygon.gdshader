@@ -185,6 +185,21 @@ uniform float snow_smoothness : hint_range(0.0, 1.0) = 0.8;
 uniform float snow_level : hint_range(0.0, 1.0) = 0.5;
 uniform float snow_transition = 0.95;
 
+// --- ALPINE MOUNTAIN SNOW INJECTIONS ---
+uniform float snow_angle_threshold : hint_range(0.0, 1.0) = 0.42;
+uniform float snow_transition_threshold : hint_range(0.0, 1.0) = 1.0;
+uniform bool snow_transition_threshold_steps = false;
+uniform int snow_transition_threshold_step_count = 4;
+uniform bool snow_overrides_normals = false;
+
+group_uniforms Wave;
+uniform bool enable_wave = false;
+uniform vec3 wave_direction_vector = vec3(0.0, 1.0, 0.0);
+uniform float wave_scale = 1.0;
+uniform float wave_speed = 1.0;
+uniform float wave_object_offset = 0.0;
+// ---------------------------------------
+
 
 struct triplanar_info {
 	vec4 sample;
@@ -298,7 +313,19 @@ float triplanar_normal_sample(sampler2D tex_top, sampler2D tex_bottom, sampler2D
 	return normalize(sample).y;
 }
 
-
+void vertex() {
+	if (enable_wave) {
+		vec3 world_pos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
+		float wave_time = TIME * wave_speed + wave_object_offset;
+		
+		// Calculate a sweeping sine wave based on world X/Z
+		float wave_val = sin(world_pos.x * wave_scale + wave_time) * cos(world_pos.z * wave_scale + wave_time);
+		
+		// Apply directional displacement (converted back to local space)
+		vec3 local_wave_dir = (inverse(MODEL_MATRIX) * vec4(wave_direction_vector, 0.0)).xyz;
+		VERTEX += local_wave_dir * wave_val * 0.1;
+	}
+}
 
 void fragment() {
 	// Get world position and normal
@@ -356,8 +383,16 @@ void fragment() {
         float snow_mask = 0.0;
 	if (enable_snow) {
 		vec3 normal_for_snow = snow_use_world_up ? world_normal : (inverse(MODEL_MATRIX) * INV_VIEW_MATRIX * vec4(NORMAL, 0.0)).xyz;
+		float snow_dot = max(0.0, normal_for_snow.y);
 		float snow_fade = mix(0.35, 50.0, snow_level);
-		snow_mask = pow(max(0.0, normal_for_snow.y), snow_fade) * snow_transition;
+		float base_mask = pow(snow_dot, snow_fade) * snow_transition;
+		
+		float advanced_mask = smoothstep(snow_angle_threshold - 0.1, snow_angle_threshold + 0.1, snow_dot);
+		snow_mask = base_mask * advanced_mask * snow_transition_threshold;
+		if (snow_transition_threshold_steps && snow_transition_threshold_step_count > 0) {
+			float steps = float(snow_transition_threshold_step_count);
+			snow_mask = floor(snow_mask * steps + 0.5) / steps;
+		}
 		snow_mask = clamp(snow_mask, 0.0, 1.0);
 
 		final_albedo = mix(final_albedo, snow_color, snow_mask);
@@ -383,6 +418,12 @@ void fragment() {
 	}
 
 	NORMAL = normalize(NORMAL + vec3(0.0, (t_normal_sample + normal_sample) * 2.0 - 1.0, 0.0));
+    
+	if (enable_snow && snow_overrides_normals) {
+		// Flatten the normal map where snow accumulates to simulate smooth packed ice/snow
+		vec3 snow_flat_normal = (inverse(MODEL_MATRIX) * INV_VIEW_MATRIX * vec4(0.0, 1.0, 0.0, 0.0)).xyz;
+		NORMAL = normalize(mix(NORMAL, snow_flat_normal, snow_mask));
+	}
 
         // === EMISSION ===
 	vec3 emission = vec3(0.0);

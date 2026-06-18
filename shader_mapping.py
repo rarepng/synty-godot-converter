@@ -239,6 +239,9 @@ SHADER_GUID_MAP: dict[str, str] = {
     # Modular Fantasy Hero Shaders (Character Customization)
     # --------------------------------------------------------------------------
     "e603b0446c7f2804db0c8dd0fb5c1af0": "polygon.gdshader",    # POLYGON_CustomCharacters (15-zone mask)
+    "436db39b4e2ae5e46a17e21865226b19": "water.gdshader",
+    "5808064c5204e554c89f589a7059c558": "glacier.gdshader",
+    "de1d86872962c37429cb628a7de53613": "skydome.gdshader"
 }
 
 # =============================================================================
@@ -291,12 +294,13 @@ SHADER_GUID_MAP: dict[str, str] = {
 # =============================================================================
 
 SHADER_NAME_PATTERNS_SCORED: list[tuple[re.Pattern[str], str, int]] = [
+    (re.compile(r"(?i)(glacier|ice_sheet|ice)"), "glacier.gdshader", 100), # idk if this is a good idea to give it such a high score
     # --------------------------------------------------------------------------
     # HIGH PRIORITY - Technical/Specific Terms (50-60 points)
     # --------------------------------------------------------------------------
     # These describe rendering techniques or very specific material types that
     # unambiguously identify the shader. Rarely appear as false positives.
-    (re.compile(r"(?i)triplanar"), "polygon.gdshader", 60),  # Rendering technique
+    (re.compile(r"(?i)(triplanar|_tri)"), "polygon.gdshader", 60),  # Rendering technique
     (re.compile(r"(?i)caustics"), "water.gdshader", 55),  # Water-specific light effect
     (re.compile(r"(?i)(fresnel|refractive|refraction)"), "crystal.gdshader", 55),  # Crystal optics
     (re.compile(r"(?i)soft.?particle"), "particles.gdshader", 55),  # Particle blending mode
@@ -307,9 +311,9 @@ SHADER_NAME_PATTERNS_SCORED: list[tuple[re.Pattern[str], str, int]] = [
     # --------------------------------------------------------------------------
     # These are clear indicators of material type that rarely appear in
     # unrelated contexts.
-    (re.compile(r"(?i)(crystal|gem|jewel|diamond|ruby|emerald|sapphire|amethyst|quartz)"), "crystal.gdshader", 45),
+    (re.compile(r"(?i)(glass|crystal|gem|jewel|diamond|ruby|emerald|sapphire|amethyst|quartz)"), "crystal.gdshader", 45),
     (re.compile(r"(?i)(water|ocean|river|lake|waterfall)"), "water.gdshader", 45),
-    (re.compile(r"(?i)(particle|fx_)"), "particles.gdshader", 45),
+    (re.compile(r"(?i)(particle|fx_|circle|cutout)"), "particles.gdshader", 45),
     (re.compile(r"(?i)(cloud|clouds|sky_cloud)"), "clouds.gdshader", 45),
 
     # --------------------------------------------------------------------------
@@ -488,6 +492,15 @@ TEXTURE_MAP_CRYSTAL: dict[str, str] = {
     "_BaseMap": "base_albedo",
 }
 
+TEXTURE_MAP_GLACIER: dict[str, str] = {
+    "_Base_Albedo": "base_albedo",
+    "_Base_Normal": "base_normal",
+    "_Refraction_Height": "refraction_height",
+    "_Refraction_Texture": "refraction_texture",
+    "_Top_Albedo": "top_albedo",
+    "_Top_Normal": "top_normal",
+}
+
 # Water Shader (Rivers, Lakes, Oceans)
 # Water uses normal maps for surface ripples and caustics for underwater light.
 TEXTURE_MAP_WATER: dict[str, str] = {
@@ -545,6 +558,7 @@ TEXTURE_MAPS: dict[str, dict[str, str]] = {
     "foliage.gdshader": TEXTURE_MAP_FOLIAGE,
     "polygon.gdshader": TEXTURE_MAP_POLYGON,
     "crystal.gdshader": TEXTURE_MAP_CRYSTAL,
+    "glacier.gdshader": TEXTURE_MAP_GLACIER,
     "water.gdshader": TEXTURE_MAP_WATER,
     "particles.gdshader": TEXTURE_MAP_PARTICLES,
     "skydome.gdshader": TEXTURE_MAP_SKYDOME,
@@ -593,6 +607,21 @@ SHADER_SPECIFIC_PROPERTIES: dict[str, dict[str, set[str]]] = {
         "floats": {"_Light_Intensity", "_Scattering_Multiplier", "_Cloud_Speed", "_Cloud_Strength", "_CloudCoverage"},
         "colors": {"_Scattering_Color", "_Aurora_Color_01", "_Aurora_Color_02"},
     },
+    "glacier.gdshader": {
+        "textures": {"_Refraction_Height", "_Refraction_Texture", "_Top_Albedo", "_Base_Albedo", "_Top_Normal", "_Base_Normal"},
+        "floats": {
+            "_Base_Metallic", "_Base_Opacity", "_Base_Tiling", "_Base_Normal_Intensity", 
+            "_Deep_Power", "_Depth_Power_Multiplier", "_Fade_Amount", "_FallOff", 
+            "_Fresnel_Border", "_Fresnel_Power", "_Inner_Distortion_Power", "_Metallic", 
+            "_Noise_Tiling", "_Opacity", "_Refraction_Power", "_Refraction_Tiling", 
+            "_Shallow_Power", "_Smootheness", "_Smoothness", "_Spread", 
+            "_Top_Metallic", "_Top_Smoothness", "_Top_Normal_Intensity", "_Top_Opacity", "_Top_Tiling"
+        },
+        "colors": {
+            "_Base_Color", "_Base_Color_Multiplier", "_DeepColor", "_Deep_Color", 
+            "_Fresnel_Color", "_Refraction_Color", "_ShallowColor", "_Shallow_Color", "_Top_Color_Multiplier"
+        },
+    },
 }
 
 # =============================================================================
@@ -636,6 +665,28 @@ FLOAT_MAP_FOLIAGE: dict[str, str] = {
     "_Tree_WindAmount": "light_wind_strength",
     "_Cutoff": "alpha_clip_threshold",
     "_AlphaCutoff": "alpha_clip_threshold",
+    "_Color_Noise_Large_Freq": "color_noise_large_freq",
+    "_ColourNoiseLargeScale": "color_noise_large_freq",
+    "_Color_Noise_Small_Freq": "color_noise_small_freq",
+    "_ColourNoiseSmallScale": "color_noise_small_freq",
+    "_FrostingFalloff": "frosting_falloff",
+    "_FrostingHeight": "frosting_height",
+    "_GustAmount": "gust_amount",
+    "_GustLargeFreq": "gust_large_freq",
+    "_GustScale": "gust_scale",
+    "_GustSmallFreq": "gust_small_freq",
+    "_JitterAmount": "jitter_amount",
+    "_JitterFreq": "jitter_freq",
+    "_LeafBigNoiseAmount": "leaf_big_noise_amount",
+    "_LeafBigNoiseScale": "leaf_big_noise_scale",
+    "_LeafNormalAmount": "leaf_normal_strength",
+    "_Leaf_Normal_Strength": "leaf_normal_strength",
+    "_Leaf_Ambient_Occlusion_Intensity": "leaf_ao_intensity",
+    "_TrunkNormalAmount": "trunk_normal_strength",
+    "_Trunk_Normal_Strength": "trunk_normal_strength",
+    "_Trunk_Ambient_Occlusion_Intensity": "trunk_ao_intensity",
+    "_WindBaseline": "wind_baseline",
+    "_Y_multiplier": "y_multiplier",
 }
 
 FLOAT_MAP_POLYGON: dict[str, str] = {
@@ -731,6 +782,18 @@ FLOAT_MAP_POLYGON: dict[str, str] = {
     "_Emission_Intensity": "emission_intensity",
     # Detail texture properties
     "_DetailNormalMapScale": "detail_normal_scale",
+    "_Snow_Angle_Threshold": "snow_angle_threshold",
+    "_Snow_Noise_Fade": "snow_noise_fade",
+    "_Snow_Noise_Top_To_Side_Difference": "snow_noise_top_to_side_difference",
+    "_Snow_Normal_Fade": "snow_normal_fade",
+    "_Snow_Transition_Threshold": "snow_transition_threshold",
+    "_Snow_Transition_Threshold_Step_Count": "snow_transition_threshold_step_count",
+    "_Wave_Scale": "wave_scale",
+    "_Wave_Speed": "wave_speed",
+    "_Wave_Object_Offset": "wave_object_offset",
+    "_Fade_Wave_Scale": "fade_wave_scale",
+    "_Fade_Wave_To_Object_Origin": "fade_wave_to_object_origin",
+    "_Fade_Wave_Vertical_Offset": "fade_wave_vertical_offset",
 }
 
 FLOAT_MAP_CRYSTAL: dict[str, str] = {
@@ -744,6 +807,40 @@ FLOAT_MAP_CRYSTAL: dict[str, str] = {
     "_Shallow_Depth": "shallow_depth",
     "_Normal_Intensity": "normal_intensity",
     "_BumpScale": "normal_intensity",
+}
+
+FLOAT_MAP_GLACIER: dict[str, str] = {
+    "_Amplitude": "amplitude",
+    "_Base_Metallic": "base_metallic",
+    "_Base_Normal_Intensity": "base_normal_intensity",
+    "_Base_Opacity": "base_opacity",
+    "_Base_Specular_Power": "base_specular_power",
+    "_Base_Tiling": "base_tiling",
+    "_Base_TIling": "base_tiling",
+    "_ColourFalloff": "color_falloff",
+    "_ColourFalloff1": "color_falloff",
+    "_Deep_Power": "deep_power",
+    "_Depth_Power_Multiplier": "depth_power_multiplier",
+    "_Fade_Amount": "fade_amount",
+    "_FallOff": "falloff",
+    "_Fresnel_Border": "fresnel_border",
+    "_Fresnel_Power": "fresnel_power",
+    "_Inner_Distortion_Power": "inner_distortion_power",
+    "_Metallic": "metallic",
+    "_Noise_Tiling": "noise_tiling",
+    "_Opacity": "opacity",
+    "_Refraction_Power": "refraction_power",
+    "_Refraction_Tiling": "refraction_tiling",
+    "_Shallow_Power": "shallow_power",
+    "_Smootheness": "smoothness",
+    "_Smoothness": "smoothness",
+    "_Spread": "spread",
+    "_Top_Metallic": "top_metallic",
+    "_Top_Smoothness": "top_smoothness",
+    "_Top_Normal_Intensity": "top_normal_intensity",
+    "_Top_Opacity": "top_opacity",
+    "_Top_Specular_Power": "top_specular_power",
+    "_Top_Tiling": "top_tiling",
 }
 
 FLOAT_MAP_WATER: dict[str, str] = {
@@ -828,6 +925,7 @@ FLOAT_MAPS: dict[str, dict[str, str]] = {
     "foliage.gdshader": FLOAT_MAP_FOLIAGE,
     "polygon.gdshader": FLOAT_MAP_POLYGON,
     "crystal.gdshader": FLOAT_MAP_CRYSTAL,
+    "glacier.gdshader": FLOAT_MAP_GLACIER,
     "water.gdshader": FLOAT_MAP_WATER,
     "particles.gdshader": FLOAT_MAP_PARTICLES,
     "skydome.gdshader": FLOAT_MAP_SKYDOME,
@@ -858,6 +956,16 @@ COLOR_MAP_FOLIAGE: dict[str, str] = {
     "_Frosting_Color": "frosting_color",
     # Legacy naming
     "_ColorTint": "color_tint",
+    "_Emissive2Colour": "emissive_2_color",
+    "_EmissiveColour": "emissive_color",
+    "_FrostingColour": "frosting_color",
+    "_GustHighlight": "gust_highlight",
+    "_LeafBaseColour": "leaf_base_color",
+    "_LeafNoiseColour": "leaf_noise_color",
+    "_LeafNoiseLargeColour": "leaf_noise_large_color",
+    "_TrunkBaseColour": "trunk_base_color",
+    "_TrunkEmissiveColour": "trunk_emissive_color",
+    "_TrunkNoiseColour": "trunk_noise_color",
 }
 
 COLOR_MAP_POLYGON: dict[str, str] = {
@@ -920,6 +1028,22 @@ COLOR_MAP_CRYSTAL: dict[str, str] = {
     "_Shallow_Color": "shallow_color",
     "_Fresnel_Color": "fresnel_color",
     "_Refraction_Color": "refraction_color",
+}
+
+COLOR_MAP_GLACIER: dict[str, str] = {
+    "_Base_Color": "base_color",
+    "_Base_Color_Multiplier": "base_color_multiplier",
+    "_DeepColor": "deep_color",
+    "_DeepColor1": "deep_color",
+    "_DeepColormulti": "deep_color",
+    "_Deep_Color": "deep_color",
+    "_Fresnel_Color": "fresnel_color",
+    "_Refraction_Color": "refraction_color",
+    "_ShallowColor": "shallow_color",
+    "_ShallowColor1": "shallow_color",
+    "_ShallowColoradd": "shallow_color",
+    "_Shallow_Color": "shallow_color",
+    "_Top_Color_Multiplier": "top_color_multiplier",
 }
 
 COLOR_MAP_WATER: dict[str, str] = {
@@ -987,6 +1111,7 @@ COLOR_MAPS: dict[str, dict[str, str]] = {
     "foliage.gdshader": COLOR_MAP_FOLIAGE,
     "polygon.gdshader": COLOR_MAP_POLYGON,
     "crystal.gdshader": COLOR_MAP_CRYSTAL,
+    "glacier.gdshader": COLOR_MAP_GLACIER,
     "water.gdshader": COLOR_MAP_WATER,
     "particles.gdshader": COLOR_MAP_PARTICLES,
     "skydome.gdshader": COLOR_MAP_SKYDOME,
@@ -1104,6 +1229,24 @@ ALPHA_FIX_PROPERTIES: set[str] = {
     "_Leaf_Noise_Color",
     "_Leaf_Noise_Large_Color",
     "_Trunk_Noise_Color",
+    "_Base_Color_Multiplier",
+    "_Top_Color_Multiplier",
+    "_DeepColor",
+    "_DeepColor1",
+    "_DeepColormulti",
+    "_ShallowColor",
+    "_ShallowColor1",
+    "_ShallowColoradd",
+    "_FrostingColour",
+    "_GustHighlight",
+    "_LeafBaseColour",
+    "_LeafNoiseColour",
+    "_LeafNoiseLargeColour",
+    "_TrunkBaseColour",
+    "_TrunkEmissiveColour",
+    "_TrunkNoiseColour",
+    "_Emissive2Colour",
+    "_EmissiveColour",
 }
 
 # =============================================================================
@@ -1179,6 +1322,20 @@ BOOLEAN_FLOAT_PROPERTIES: set[str] = {
     "_Use_Environment_Override",
     "_Enable_Fog",
     "_Enable_Scattering",
+    "_FrostingSwitch",
+    "_FrostingWorldObjectSwitch2",
+    "_Frosting_Use_World_Normals",
+    "_LeafFlatColourSwitch",
+    "_Leaf_Flat_Color",
+    "_TrunkFlatColourSwitch",
+    "_Trunk_Flat_Color_Switch",
+    "_Use_Global_Weather_Controller",
+    "_Use_Color_Noise",
+    "_Enable_Top_Projection",
+    "_Snow_Overrides_Normals",
+    "_Snow_Transition_Threshold_Steps",
+    "_Snow_Use_World_Up",
+    "_Inner_Distortion",
 }
 
 # =============================================================================
@@ -1198,6 +1355,14 @@ BOOLEAN_FLOAT_PROPERTIES: set[str] = {
 # =============================================================================
 
 SHADER_DEFAULTS: dict[str, dict[str, float | bool]] = {
+    "glacier.gdshader": {
+        "opacity": 1.0,
+        "base_opacity": 1.0,
+        "enable_refraction": True,
+        "enable_triplanar": True,
+        "enable_depth": True,
+        "enable_side_fresnel": True,
+    },
     "crystal.gdshader": {
         # Unity crystals are often fully opaque (1.0), but crystals look
         # better with some translucency in Godot

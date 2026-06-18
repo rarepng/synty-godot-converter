@@ -259,6 +259,19 @@ uniform bool enable_wind_twist = false;
 uniform float wind_twist_strength : hint_range(0.0, 2.0) = 0.15;
 uniform float gale_blend : hint_range(0.0, 2.0) = 1.0;
 
+group_uniforms Wind.AlpineDynamic;
+uniform float gust_amount : hint_range(0.0, 1.0) = 0.394;
+uniform float gust_large_freq : hint_range(0.0, 2.0) = 0.184;
+uniform float gust_small_freq : hint_range(0.0, 2.0) = 0.184;
+uniform float gust_scale : hint_range(0.0, 5.0) = 0.5;
+uniform vec4 gust_highlight : source_color = vec4(0.135, 0.150, 0.128, 1.0);
+uniform float jitter_amount : hint_range(0.0, 1.0) = 0.445;
+uniform float jitter_freq : hint_range(0.0, 2.0) = 0.575;
+uniform float y_multiplier : hint_range(0.0, 1.0) = 0.2;
+uniform float wind_baseline : hint_range(0.0, 1.0) = 0.0;
+uniform float leaf_big_noise_amount : hint_range(0.0, 1.0) = 0.093;
+uniform float leaf_big_noise_scale : hint_range(0.0, 5.0) = 2.35;
+
 ////////// GLOBALS //////////
 
 global uniform vec3 WindDirection;
@@ -516,6 +529,7 @@ vec3 triplanar_map(vec3 x, vec3 y, vec3 z, vec3 n) {
 varying vec3 world_vertex;
 varying vec3 world_normal;
 varying vec3 local_normal;
+varying float alpine_gust_mask;
 
 
 void vertex() {
@@ -563,6 +577,23 @@ void vertex() {
 	float gale_factor = use_vertex_color_wind ? height_gradient : VERTEX.y * 0.5;
 	vec3 wind_and_gale = mix(blended_gale, wind_component, gale_factor);
 
+	float jitter_time = TIME * jitter_freq * 10.0;
+	vec3 jitter_offset = vec3(
+		sin(jitter_time + world_vertex.x), 
+		cos(jitter_time + world_vertex.y) * y_multiplier, 
+		sin(jitter_time + world_vertex.z)
+	) * jitter_amount * 0.1;
+	if (COLOR.b > 0.5) {
+		wind_and_gale += jitter_offset * height_gradient;
+	}
+
+	float gust_time = TIME * gust_large_freq * 5.0;
+	float gust_wave = sin(world_vertex.x * gust_scale + gust_time) + cos(world_vertex.z * gust_scale + gust_time);
+	gust_wave = smoothstep(0.0, 1.0, gust_wave * 0.5 + 0.5); 
+	vec3 gust_offset = wind_direction * gust_wave * gust_amount;
+	wind_and_gale += gust_offset * height_gradient;
+	alpine_gust_mask = gust_wave * (COLOR.b > 0.5 ? 1.0 : 0.0);
+
 	VERTEX = mix(VERTEX, wind_and_gale, wind_intensity);  // Object
 }
 
@@ -598,7 +629,7 @@ void fragment() {
 			texture_color = mix(texture_color, frosting_color, frost_level);
 		}
 
-		ALBEDO = texture_color.xyz;
+		ALBEDO = mix(texture_color.rgb, gust_highlight.rgb, alpine_gust_mask * 0.5);
 		ALPHA = texture_alpha;
 		METALLIC = leaf_metallic;
 		ROUGHNESS = 1.0 - leaf_smoothness;

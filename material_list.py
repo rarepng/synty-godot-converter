@@ -175,7 +175,8 @@ def _parse_slot_line(line: str) -> MaterialSlot | None:
     material_name = match.group(1).strip()
     parentheses_content = match.group(2).strip()
 
-    if parentheses_content.lower() == "uses custom shader":
+    content_lower = parentheses_content.lower()
+    if content_lower == "uses custom shader" or content_lower == "no albedo texture":
         return MaterialSlot(
             material_name=material_name,
             texture_name=None,
@@ -337,13 +338,18 @@ def get_mesh_to_materials_map(prefabs: list[PrefabMaterials]) -> dict[str, list[
     for prefab in prefabs:
         for mesh in prefab.meshes:
             material_names = [slot.material_name for slot in mesh.slots]
-            if mesh.mesh_name in result:
-                logger.debug(
-                    f"Duplicate mesh name found: {mesh.mesh_name!r}. "
-                    f"Previous materials: {result[mesh.mesh_name]}, "
-                    f"New materials: {material_names}. Using new values."
-                )
-            result[mesh.mesh_name] = material_names
+            has_custom_override = any(slot.uses_custom_shader for slot in mesh.slots)
+            
+            names_to_map = {mesh.mesh_name}
+            
+            if "_LOD" not in mesh.mesh_name:
+                for i in range(4):
+                    names_to_map.add(f"{mesh.mesh_name}_LOD{i}")
+                    
+            for name in names_to_map:
+                if name in result and not has_custom_override:
+                    continue
+                result[name] = material_names
 
     logger.debug(f"Built mesh-to-materials map: {len(result)} meshes")
     return result

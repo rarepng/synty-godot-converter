@@ -134,6 +134,7 @@ SHADER_FILES = [
     "polygon.gdshader",
     "skydome.gdshader",
     "water.gdshader",
+    "glacier.gdshader"
 ]
 
 # Supported texture extensions (for finding textures by name)
