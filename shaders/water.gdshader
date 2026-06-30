@@ -127,511 +127,431 @@ active by default.
 ******************************************************************************/
 
 shader_type spatial;
-render_mode blend_mix, depth_draw_opaque, cull_back, diffuse_lambert, specular_disabled;
+render_mode blend_mix, specular_schlick_ggx, cull_disabled; //  no depth_draw_opaque or cull_back but idk about diffuse_lambert, specular_disabled;
 
+uniform float _Base_Opacity : hint_range(0.0, 1.0) = 0.941;
+uniform float _Shallows_Opacity : hint_range(0.0, 1.0) = 0.616;
+
+uniform vec4 _Shallow_Color : source_color = vec4(0.332, 0.723, 0.792, 1.0);
+uniform vec4 _Deep_Color : source_color = vec4(0.209, 0.509, 0.497, 1.0);
+uniform vec4 _Very_Deep_Color : source_color = vec4(0.098, 0.301, 0.367, 1.0);
+
+uniform float _Deep_Height = 4.1;
+uniform float _Very_Deep_Height = 31.38;
+
+uniform float _Smoothness : hint_range(0.0, 1.0) = 0.776;
+uniform float _Metallic : hint_range(0.0, 1.0) = 0.0;
+
+uniform float _Enable_Ocean_Wave = 1.0;
+uniform float _Ocean_Wave_Height : hint_range(0.0, 10.0) = 3.43;
+uniform float _Ocean_Wave_Speed : hint_range(0.0, 1.0) = 1.0;
+uniform sampler2D _OceanWaveGradient : source_color, filter_linear, repeat_enable;
+
+uniform float _Enable_Shore_Wave_Foam = 1.0;
+uniform float _Enable_Shore_Animation = 1.0;
+uniform float _Animation_Offset = 0.0;
+uniform float _Shore_Edge_Opacity : hint_range(0.0, 1.0) = 0.369;
+uniform float _Shore_Edge_Thickness : hint_range(0.0, 1.0) = 0.031;
+uniform float _Shore_Edge_Noise_Scale = 0.4;
+uniform float _Shore_Wave_Speed : hint_range(0.0, 1.0) = 0.318;
+uniform float _Shore_Wave_Return_Amount : hint_range(0.0, 1.0) = 0.605;
+uniform float _Shore_Wave_Thickness : hint_range(0.0, 1.0) = 0.323;
+uniform vec4 _Shore_Wave_Color_Tint : source_color = vec4(0.528, 0.752, 0.867, 1.0);
+
+uniform float _Enable_Shore_Foam = 1.0;
+uniform float _Shore_Small_Foam_Opacity : hint_range(0.0, 1.0) = 0.339;
+uniform float _Shore_Small_Foam_Tiling = 2.5;
+uniform float _Shore_Foam_Noise_Scale = 2.0;
+uniform vec4 _Shore_Foam_Color_Tint : source_color = vec4(0.529, 0.752, 0.866, 1.0);
+
+uniform float _Enable_Caustics = 1.0;
+uniform float _Caustics_Scale = 18.46;
+uniform float _Caustics_Speed = 1.0;
+uniform float _Caustics_Intensity : hint_range(0.0, 1.0) = 0.077;
+uniform float _Caustics_Use_Voronoi_Noise = 0.0;
+uniform vec4 _Caustics_Color : source_color = vec4(0.369, 0.99, 0.99, 1.0);
+
+uniform float _Enable_Normals = 1.0;
+uniform float _Normal_Intensity : hint_range(0.0, 1.0) = 1.0;
+uniform float _Normal_Tiling = 2.0;
+uniform float _Normal_Pan_Speed = 1.0;
+uniform float _Normal_Noise_Intensity = 0.23;
+uniform float _Normal_Noise_Tiling = 1.0;
+uniform vec4 _Normal_Offset = vec4(0.0, 0.0, 0.0, 0.0);
+
+uniform float _Enable_Global_Foam = 0.0;
+uniform float _Ocean_Foam_Amount : hint_range(0.0, 1.0) = 0.0;
+uniform float _Ocean_Foam_Opacity : hint_range(0.0, 1.0) = 0.0;
+uniform float _Ocean_Foam_Breakup_Tiling = 1.0;
+
+uniform float _Enable_Distortion = 0.0;
+uniform float _Distortion_Speed = 0.2;
+uniform vec4 _Distortion_Direction = vec4(0.1, 0.1, 0.0, 0.0);
+uniform float _Distortion_Strength = 0.06;
+uniform float _Distortion_Size = 10.0;
+
+uniform float _Enable_Top_Scrolling_Texture = 0.0;
+uniform vec4 _Scrolling_Texture_Direction = vec4(0.0, -0.01, 0.0, 0.0);
+uniform vec4 _Scrolling_Texture_Tiling = vec4(1.0, 1.0, 0.0, 0.0);
+uniform vec4 _Scrolling_Texture_Tint : source_color = vec4(0.371, 0.724, 0.811, 0.0);
+uniform float _Scrolling_Texture_Opacity : hint_range(0.0, 1.0) = 1.0;
+
+uniform float _Enable_Fresnel_Fade = 0.0;
+uniform float _Fade_Distance = 1.0;
+uniform float _Fade_Power = 0.0;
+
+uniform sampler2D _Normal_Texture : hint_normal, filter_linear_mipmap, repeat_enable;
+uniform sampler2D _Noise_Texture : hint_default_white, filter_linear_mipmap, repeat_enable;
+uniform sampler2D _Shore_Foam_Noise_Texture : hint_default_white, filter_linear_mipmap, repeat_enable;
+uniform sampler2D _Scrolling_Texture : hint_default_white, filter_linear_mipmap, repeat_enable;
+uniform sampler2D _SampleTexture2D_c5bda943a6134644bb954c2c5ced7db4_Texture_1_Texture2D : hint_default_white, filter_linear_mipmap, repeat_enable;
+
+uniform float _AlphaClip = 0.0;
 uniform sampler2D DEPTH_TEXTURE : hint_depth_texture, filter_linear_mipmap;
 uniform sampler2D SCREEN_TEXTURE : hint_screen_texture, filter_linear_mipmap;
 
-group_uniforms General;
-
-uniform bool use_global_weather_controller = false;
-
-uniform float non_global_gale_strength = 0.2;
-uniform vec3 non_global_wind_direction = vec3(1.0, 0.0, 0.0);
-uniform sampler2D non_global_ocean_waves_gradient: source_color, filter_linear_mipmap;
-
-group_uniforms Base;
-
-uniform float smoothness: hint_range(0.0, 1.0) = 0.766;
-uniform float metallic: hint_range(0.0, 1.0) = 0.0;
-uniform float base_opacity: hint_range(0.0, 1.0) = 0.941;
-uniform float shallows_opacity: hint_range(0.0, 1.0) = 0.661;
-uniform vec4 shallow_color: source_color = vec4(0.5, 0.5, 0.2, 1.0);
-uniform vec4 deep_color: source_color = vec4(0.4, 0.4, 0.8, 1.0);
-uniform vec4 very_deep_color: source_color = vec4(0.1, 0.1, 0.2, 1.0);
-uniform float deep_height = 1.16;
-uniform float very_deep_height = 4;
-uniform float maximum_depth = 15.0;
-
-group_uniforms Base.Normals;
-uniform bool enable_normals = false;
-uniform sampler2D normal_texture: source_color, filter_linear_mipmap;
-uniform vec2 normal_offset = vec2(0.0);
-uniform float normal_tiling = 0.0;
-uniform float normal_intensity: hint_range(0.0, 10.0) = 1.0;
-uniform float normal_pan_speed = 1.0;
-uniform float normal_noise_tiling = 0.2;
-uniform float normal_noise_intensity = 0.23;
-
-group_uniforms Base.FadeDistantNormals;
-uniform bool enable_fresnel_fade  = false;
-uniform float fade_distance = 1.0;
-uniform float fade_power = 0.0;
-
-
-group_uniforms ShoreFoam;
-uniform bool enable_shore_wave_foam = false;
-
-group_uniforms ShoreFoam.Wave;
-uniform bool enable_shore_animation = false;
-uniform int animation_offset = 0;
-
-uniform float shore_wave_speed: hint_range(0.0, 1.0) = 1.0;
-uniform float shore_wave_return_amount: hint_range(0.0, 1.0) = 1.0;
-uniform float shore_wave_tickness: hint_range(0.0, 1.0) = 0.1;
-uniform float shore_edge_opacity: hint_range(0.0, 1.0) = 0.1;
-uniform vec4 shore_wave_color_tint: source_color = vec4(1.0);
-uniform float shore_edge_tickness: hint_range(0.0, 1.0) = 0.1;
-uniform float shore_edge_noise_scale = 0.86;
-
-uniform float shore_lap_fade_out_speed: hint_range(0.0, 10.0) = 1.0;
-uniform float shore_lap_fade_in_speed: hint_range(0.0, 10.0) = 3.0;
-
-uniform int shore_foam_noise_scale: hint_range(0, 100, 1) = 1;
-uniform sampler2D shore_foam_noise_texture: source_color, filter_linear_mipmap;
-
-group_uniforms ShoreFoam.Foam;
-uniform bool enable_shore_foam = false;
-uniform float shore_small_foam_opacity: hint_range(0.0, 1.0) = 0.725;
-uniform float shore_small_foam_tiling = 2.5;
-uniform vec4 shore_foam_color_tint: source_color = vec4(1.0);
-
-
-group_uniforms GlobalFoam;
-uniform bool enable_global_foam = false;
-uniform sampler2D noise_texture: source_color, filter_linear_mipmap;
-
-group_uniforms GlobalFoam.TopScrollingTexture;
-uniform bool enable_top_scrolling_texture = false;
-uniform vec2 top_scrolling_direction = vec2(0.0, -0.01);
-uniform sampler2D scrolling_texture: source_color, filter_linear_mipmap;
-uniform vec2 scrolling_texture_tiling = vec2(1.0, 1.0);
-uniform vec4 scrolling_texture_tint: source_color = vec4(0.3, 0.8, 0.95, 1.0);
-uniform float scrolling_texture_opacity: hint_range(0.0, 1.0) = 0.25;
-
-group_uniforms Waves;
-uniform bool enable_ocean_waves = false;
-uniform float ocean_wave_height: hint_range(0.0, 10.0) = 0.40;
-uniform float ocean_wave_speed: hint_range(0.0, 1.0) = 0.3;
-uniform float ocean_foam_amount: hint_range(0.0, 1.0) = 0.5;
-uniform float ocean_foam_opacity: hint_range(0.0, 1.0) = 0.321;
-uniform float ocean_wave_frequency: hint_range(1.0, 20.0) = 1.0;
-uniform int ocean_breakup_tiling = 1;
-
-
-group_uniforms Advanced;
-
-group_uniforms Advanced.Caustics;
-uniform bool enable_caustics = false;
-uniform bool caustics_use_voronoi_noise = false;
-uniform float caustics_intensity: hint_range(0.0, 1.0) = 0.5;
-uniform vec4 caustics_color: source_color = vec4(1.0);
-uniform sampler2D caustics_flipbook: source_color, filter_linear_mipmap;
-uniform float caustics_speed: hint_range(0.0, 10.0) = 1.0;
-uniform int caustics_scale = 1;
-
-group_uniforms Advanced.Distorsion;
-uniform bool enable_distortion = false;
-uniform float distortion_speed: hint_range(0.0, 1.0) = 0.5;
-uniform vec2 distortion_direction = vec2(1.0, 1.0);
-uniform float distortion_size: hint_range(0.0, 1.0) = 0.1;
-uniform float distortion_strength: hint_range(0.0, 1.0) = 0.5;
-
-
-global uniform vec3 WindDirection;
-global uniform float GaleStrength;
-global uniform sampler2D OceanWavesGradient;
-
-//////// Generic Utilities
-
-vec3 rotate_around_y(vec3 pos, float angle_deg) {
-    float angle = radians(angle_deg);
-    float c = cos(angle);
-    float s = sin(angle);
-    mat3 rot = mat3(
-        vec3(c, 0.0, -s),
-        vec3(0.0, 1.0, 0.0),
-        vec3(s, 0.0, c)
-    );
-    return rot * pos;
+// copied from HLSL EXACTLY
+float Hash_Tchou_2_1(vec2 uv) {
+    return fract(sin(dot(uv, vec2(12.9898, 78.233))) * 43758.5453);
 }
-
-float saturate_value(float value) {
-	return clamp(value, 0.0, 1.0);
+vec2 Hash_Tchou_2_2(vec2 uv) {
+    uv = vec2(dot(uv, vec2(127.1, 311.7)), dot(uv, vec2(269.5, 183.3)));
+    return fract(sin(uv) * 43758.5453123);
 }
-
-vec2 unity_voronoi_noise_randomVector(vec2 uv, float offset) {
-    mat2 m = mat2(vec2(15.27, 99.41), vec2(47.63, 89.98));
-    vec2 temp = transpose(m) * uv;
-    uv = fract(sin(temp) * 46839.32);
-    return vec2(sin(uv.y * offset) * 0.5 + 0.5, cos(uv.x * offset) * 0.5 + 0.5);
+vec3 Unity_Rotate_About_Axis_Degrees(vec3 In, vec3 Axis, float Rotation) {
+    float rot = radians(Rotation);
+    float s = sin(rot);
+    float c = cos(rot);
+    Axis = normalize(Axis);
+    return In * c + cross(Axis, In) * s + Axis * dot(Axis, In) * (1.0 - c);
 }
-
-vec2 Unity_Voronoi(vec2 uv, float AngleOffset, float CellDensity) {
-    vec2 g = floor(uv * CellDensity);
-    vec2 f = fract(uv * CellDensity);
-    float t = 8.0;
-    vec3 res = vec3(t, 0.0, 0.0);
+vec2 Unity_TilingAndOffset(vec2 uv_val, vec2 Tiling, vec2 Offset) {
+    return uv_val * Tiling + Offset;
+}
+float Unity_Remap(float In, vec2 InMinMax, vec2 OutMinMax) {
+    return OutMinMax.x + (In - InMinMax.x) * (OutMinMax.y - OutMinMax.x) / (InMinMax.y - InMinMax.x);
+}
+float Unity_FresnelEffect(vec3 Normal, vec3 ViewDir, float Power) {
+    return pow((1.0 - clamp(dot(normalize(Normal), ViewDir), 0.0, 1.0)), Power);
+}
+vec3 Unity_NormalBlend(vec3 A, vec3 B) {
+    return normalize(vec3(A.rg + B.rg, A.b * B.b));
+}
+vec2 Unity_Flipbook_InvertY(vec2 uv_val, float Width, float Height, float Tile, vec2 Invert) {
+    Tile = floor(mod(Tile + 0.00001, Width * Height));
+    vec2 tileCount = vec2(1.0, 1.0) / vec2(Width, Height);
+    float base = floor((Tile + 0.5) * tileCount.x);
+    float tileX = (Tile - Width * base);
+    float tileY = (Invert.y * Height - (base + Invert.y * 1.0));
+    return (uv_val + vec2(tileX, tileY)) * tileCount;
+}
+vec2 Unity_Voronoi_RandomVector_Deterministic(vec2 uv_val, float offset) {
+    vec2 hash = Hash_Tchou_2_2(uv_val);
+    return vec2(sin(hash.y * offset), cos(hash.x * offset)) * 0.5 + 0.5;
+}
+void Unity_Voronoi_Deterministic(vec2 uv_val, float AngleOffset, float CellDensity, out float Out, out float Cells) {
+    vec2 g = floor(uv_val * CellDensity);
+    vec2 f = fract(uv_val * CellDensity);
+    vec3 res = vec3(8.0, 0.0, 0.0);
+    
     for (int y = -1; y <= 1; y++) {
         for (int x = -1; x <= 1; x++) {
             vec2 lattice = vec2(float(x), float(y));
-            vec2 offset = unity_voronoi_noise_randomVector(lattice + g, AngleOffset);
-            vec2 point = lattice + offset - f;
-            float d = length(point);
+            vec2 offset = Unity_Voronoi_RandomVector_Deterministic(lattice + g, AngleOffset);
+            float d = distance(lattice + offset, f);
             if (d < res.x) {
                 res = vec3(d, offset.x, offset.y);
+                Out = res.x;
+                Cells = res.y;
             }
         }
     }
-    return vec2(res.x, res.y);
 }
-
-
-vec2 get_flipbook_uv(vec2 uv, int tile_width, int tile_height, int tile_index, bool invert_x, bool invert_y) {
-    vec2 tile_size = vec2(1.0 / float(tile_width), 1.0 / float(tile_height));
-
-	int h_tile = tile_index % tile_width;
-	int v_tile = (tile_index / tile_width) % tile_height;
-	if(invert_x) {
-		h_tile = tile_width - h_tile - 1;
-	}
-	if(invert_y) {
-		v_tile = tile_height - v_tile - 1;
-	}
-
-    vec2 tile_offset = vec2(
-        float(h_tile) * tile_size.x,
-        1.0 - (1.0 + float(v_tile)) * tile_size.y
-    );
-
-    vec2 adjusted_uv = uv * tile_size + tile_offset;
-
-    return adjusted_uv;
-}
-
-float remap01(float input, float outMin, float outMax) {
-    return outMin + input * (outMax - outMin);
-}
-
-
-vec4 top_down_projection(vec3 world_pos, vec3 world_normal, sampler2D tex, vec2 tile, vec2 off) {
-	vec2 tpos = (world_pos * vec3(1, 1, -1)).xz;
-	vec2 tnorm = vec2((sign(world_normal) * vec3(-1, 1, 1)).y, 1.0);
-	vec2 prj_uv = (tpos * tnorm) * tile + off;
-	return(texture(tex, prj_uv));
-}
-
-vec2 unity_gradientNoise_dir(vec2 p)
-{
-    p = mod(p, 289.0);
-    float x = (34.0 * p.x + 1.0) * mod(p.x, 289.0) + p.y;
-    x = (34.0 * x + 1.0) * mod(x, 289.0);
-    x = fract(x / 41.0) * 2.0 - 1.0;
+vec2 Unity_GradientNoise_Deterministic_Dir(vec2 p) {
+    float x = Hash_Tchou_2_1(p);
     return normalize(vec2(x - floor(x + 0.5), abs(x) - 0.5));
 }
-
-float unity_gradientNoise(vec2 p)
-{
+float Unity_GradientNoise_Deterministic(vec2 uv_val, vec3 Scale) {
+    vec2 p = uv_val * Scale.xy;
     vec2 ip = floor(p);
     vec2 fp = fract(p);
-    float d00 = dot(unity_gradientNoise_dir(ip), fp);
-    float d01 = dot(unity_gradientNoise_dir(ip + vec2(0.0, 1.0)), fp - vec2(0.0, 1.0));
-    float d10 = dot(unity_gradientNoise_dir(ip + vec2(1.0, 0.0)), fp - vec2(1.0, 0.0));
-    float d11 = dot(unity_gradientNoise_dir(ip + vec2(1.0, 1.0)), fp - vec2(1.0, 1.0));
+    float d00 = dot(Unity_GradientNoise_Deterministic_Dir(ip), fp);
+    float d01 = dot(Unity_GradientNoise_Deterministic_Dir(ip + vec2(0.0, 1.0)), fp - vec2(0.0, 1.0));
+    float d10 = dot(Unity_GradientNoise_Deterministic_Dir(ip + vec2(1.0, 0.0)), fp - vec2(1.0, 0.0));
+    float d11 = dot(Unity_GradientNoise_Deterministic_Dir(ip + vec2(1.0, 1.0)), fp - vec2(1.0, 1.0));
     fp = fp * fp * fp * (fp * (fp * 6.0 - 15.0) + 10.0);
-    return mix(mix(d00, d01, fp.y), mix(d10, d11, fp.y), fp.x);
+    return mix(mix(d00, d01, fp.y), mix(d10, d11, fp.y), fp.x) + 0.5;
 }
 
-float unity_gradientNoise_scaled(vec2 uv, float scale)
-{
-    return unity_gradientNoise(uv * scale) + 0.5;
+vec2 SG_Panner(vec2 uv_val, vec2 Speed, vec3 TimeParameters) {
+    return uv_val + (Speed * vec2(TimeParameters.x, TimeParameters.x));
 }
 
-vec2 panner(vec2 uv, float speed) {
-	vec2 time_factor = vec2(TIME * speed);
-	return uv + time_factor;
+void SG_OceanWaveMask(float OceanWaveSpeed, sampler2D OceanWaveGradient, float OceanWaveHeight, vec3 WindDirection, float GaleStrength, vec3 AbsoluteWorldSpacePosition, vec3 TimeParameters, out float final_y_displacement, out float ZOffset) {
+    float time_speed = OceanWaveSpeed * 10.0 * TimeParameters.x;
+    vec3 norm_wind = normalize(WindDirection);
+    bool comp = norm_wind.x >= 0.0;
+    
+    float dot_prod = dot(norm_wind, vec3(0.0, 0.0, 1.0));
+    
+    float angle_deg = degrees(acos(clamp(dot_prod, -1.0, 1.0)));
+    float inverse_angle = 1.0 - angle_deg;
+    
+    float branch_val = comp ? inverse_angle : angle_deg;
+    float rotation_val = branch_val + 225.0;
+    
+    vec3 rotated_pos = Unity_Rotate_About_Axis_Degrees(AbsoluteWorldSpacePosition, vec3(0.0, 1.0, 0.0), rotation_val);
+    
+    float pos_r_b = rotated_pos.x + rotated_pos.z;
+    float time_pos_sum = time_speed + pos_r_b;
+    float gradient_uv = fract(time_pos_sum * 0.01);
+    
+    vec4 gradient_sample = texture(OceanWaveGradient, vec2(gradient_uv, 0.0));
+    
+    float height_val = gradient_sample.r + gradient_sample.g;
+    final_y_displacement = height_val * (height_val * OceanWaveHeight); 
+    ZOffset = gradient_sample.r;
 }
 
-
-///// PROCESS STEPS
-
-float scene_depth(vec2 screen_uv, mat4 inv_prj) {
-	// Sample nonlinear scene depth (closest opaque surface)
-	float raw_depth = texture(DEPTH_TEXTURE, screen_uv).r;
-
-	// Reconstruct NDC (adjust for renderer)
-    vec3 ndc;
-    #if CURRENT_RENDERER == RENDERER_COMPATIBILITY
-    ndc = vec3(screen_uv * 2.0 - 1.0, raw_depth * 2.0 - 1.0);
-    #else  // Forward+/Mobile (default, reversed-Z)
-    ndc = vec3(screen_uv * 2.0 - 1.0, raw_depth);
-    #endif
-
-    // Transform to view space and get linear depth
-    vec4 view_pos = inv_prj * vec4(ndc, 1.0);
-    view_pos.xyz /= view_pos.w;
-	return -view_pos.z; // Positive distance from camera
+void SG_TopDownProjection(sampler2D Texture, vec2 Tiling, vec2 Offset, vec3 WorldSpaceNormal, vec3 AbsoluteWorldSpacePosition, out vec4 OutVector4, out float R, out float G, out float B, out float A) {
+    vec3 sign_norm = sign(WorldSpaceNormal) * vec3(-1.0, 1.0, 1.0);
+    vec2 rg_val = vec2(sign_norm.y, 1.0);
+    
+    vec3 pos_mult = AbsoluteWorldSpacePosition * vec3(1.0);
+    vec3 inverted_z = pos_mult * vec3(1.0, 1.0, -1.0);
+    
+    vec2 proj_uv = rg_val * vec2(inverted_z.x, inverted_z.z);
+    vec2 final_uv = Unity_TilingAndOffset(proj_uv, Tiling, Offset);
+    
+    OutVector4 = texture(Texture, final_uv);
+    R = OutVector4.r;
+    G = OutVector4.g;
+    B = OutVector4.b;
+    A = OutVector4.a;
 }
 
-vec2 get_caustic_uv(vec3 camera_pos, vec3 camera_dir, vec3 view_dir, float depth) {
-	vec3 view_module = view_dir / dot(view_dir, camera_dir);
-	vec3 depth_vector = depth * view_module;
-	return (depth_vector + camera_pos).xz;
+void SG_TopDownProjectionNormal(sampler2D Texture, vec2 Tiling, vec2 Offset, vec3 WorldSpaceNormal, vec3 AbsoluteWorldSpacePosition, out vec4 OutVector4, out float R, out float G, out float B) {
+    vec3 sign_norm = sign(WorldSpaceNormal) * vec3(-1.0, 1.0, 1.0);
+    vec2 rg_val = vec2(sign_norm.y, 1.0);
+    
+    vec3 pos_mult = AbsoluteWorldSpacePosition * vec3(1.0);
+    vec3 inverted_z = pos_mult * vec3(1.0, 1.0, -1.0);
+    
+    vec2 proj_uv = rg_val * vec2(inverted_z.x, inverted_z.z);
+    vec2 final_uv = Unity_TilingAndOffset(proj_uv, Tiling, Offset);
+    
+    vec4 normal_sample = texture(Texture, final_uv);
+    
+    OutVector4 = normal_sample;
+    R = normal_sample.r;
+    G = normal_sample.g;
+    B = normal_sample.b;
 }
 
-vec4 water_caustics(vec3 camera_pos, vec3 camera_dir, vec3 view_dir, float eye_depth, float depth_fade) {
-	vec2 caustic_color_uv = get_caustic_uv(camera_pos, camera_dir, view_dir, eye_depth);
-
-	float caustic_value;
-	if (caustics_use_voronoi_noise) {
-		// The UNITY branch is not using scale and speed in the voronoi branch.
-		float value = Unity_Voronoi(caustic_color_uv / max(0.01, float(caustics_scale)/2.0), (TIME * caustics_speed + 100.0) * 2.0, 3.0).x;
-		caustic_value = saturate_value(pow(value, 4.0));
-	} else {
-		vec2 scaled_in_uv = caustic_color_uv / max(0.01, float(caustics_scale));
-		vec2 fract_part = vec2(fract(scaled_in_uv.x), fract(scaled_in_uv.y));
-
-		int flipbook_idx = int(TIME * caustics_speed * 10.0); // at speed scale 1, change 10 indices per second
-		vec2 sample_uv = get_flipbook_uv(fract_part, 8, 8, flipbook_idx, false, true);
-		caustic_value = texture(caustics_flipbook, sample_uv).r;
-	}
-
-	// Fade caustics out the deeper the ocean
-	float saturated_depth = saturate_value(depth_fade * 0.1);
-	float ocean_foor_fader = (1.0 - saturated_depth) * saturated_depth;
-
-	// Set caustics intensity
-	vec4 faded_caustics = caustics_color * ocean_foor_fader * caustic_value;
-	faded_caustics *= caustics_intensity * 10.0;
-	float cc_intensity = caustics_intensity + 1.0;
-	return vec4(
-			saturate_value(pow(faded_caustics.r, cc_intensity)),
-			saturate_value(pow(faded_caustics.g, cc_intensity)),
-			saturate_value(pow(faded_caustics.b, cc_intensity)),
-			saturate_value(pow(faded_caustics.a, cc_intensity)));
-}
-
-vec4 water_shore_waves(vec3 position, vec3 normal, float depth) {
-	// Foam Noise
-	vec4 foam_noise_raw = top_down_projection(position, normal, shore_foam_noise_texture, vec2(float(shore_foam_noise_scale) * 0.005), vec2(0.0));
-	float foam_noise = saturate_value(pow(foam_noise_raw.x, 0.2));
-
-	// Shore wave oscillation
-	vec4 shore_wave_raw = top_down_projection(position, normal, noise_texture, vec2(float(shore_edge_noise_scale) * 0.005), vec2(0.0));
-	float shore_wave_oscillation = saturate_value(shore_wave_raw.r);
-
-	// Normalized Shore Lap Time Loop (0 - 1)
-	float animation = enable_shore_animation ? TIME : float(animation_offset);
-	float norm_shore_lap_time = fract(shore_wave_oscillation + shore_wave_speed * animation);
-
-	// Shore wave return factor
-	float return_factor = PI / (2.0 - shore_wave_return_amount);
-	float sin_lap = sin(norm_shore_lap_time * return_factor);
-	float wave_lap = depth + sin_lap;
-
-	float wave_motion = saturate_value(wave_lap * foam_noise);
-
-	// Fadein - fadeout
-	float rect_lap_fade_in_speed = 1.0 - saturate_value(remap01(norm_shore_lap_time, -shore_lap_fade_in_speed, 1.0));
-	float rect_lap_fade_out_speed = 1.0 - saturate_value(remap01(norm_shore_lap_time, 1.0, -shore_lap_fade_out_speed));
-	float lap_fade_speed = rect_lap_fade_in_speed * rect_lap_fade_out_speed;
-
-	// Shore lap tickness
-	float rectified_shore_wave_tickness = shore_wave_tickness * 0.9999 * lap_fade_speed;
-
-	// Wave direction mask (0 moving back, 1 moving forward)
-	float wave_dir = saturate_value(floor(wave_motion + rectified_shore_wave_tickness) - floor(wave_motion));
-	float wave_factor = mix(0.0, wave_dir, shore_edge_opacity / 1.5);
-
-	return shore_wave_color_tint * wave_factor;
-}
-
-vec4 water_shore_foam(vec3 position, vec3 normal, float depth) {
-	float depth_factor = (1.0 - saturate_value(depth / 2.0)) * 0.8;
-	float time_offset =  TIME * 0.003;
-	vec4 foam = top_down_projection(position, normal, noise_texture, vec2(shore_small_foam_tiling * 0.01), vec2(time_offset));
-
-	// Apply noise to the shore mask to create foam effects
-	float effect_factor = saturate_value(pow((depth_factor * foam).r * 5.0, 20.0));
-	float effect_mask = mix(0, effect_factor, shore_small_foam_opacity / 3.0);
-	return shore_foam_color_tint * effect_mask;
-}
-
-vec3 water_distortion(vec2 uv, vec2 screen_pos) {
-	vec2 vdist = distortion_direction * distortion_speed * 0.001;
-	vec2 noise_source = uv + vdist * TIME;
-	float noise = unity_gradientNoise_scaled(noise_source, distortion_size * 200.0);
-	vec2 sampler = noise * distortion_strength * 0.05 + screen_pos;
-	sampler += sin(TIME/2.0 * (1.0+distortion_speed * 2.0)) * distortion_strength / 100.0;
-
-	return texture(SCREEN_TEXTURE, sampler).xyz * 0.65;
-}
-
-vec4 water_top_scrolling(vec2 uv) {
-	vec2 time_offset = (1.0 - top_scrolling_direction * TIME);
-	vec4 sample = texture(scrolling_texture,uv * scrolling_texture_tiling + time_offset);
-
-	return sample * scrolling_texture_tint * scrolling_texture_opacity;
-}
-
-vec3 water_normal(vec3 world_pos, vec3 world_normal) {
-	vec2 tiling = vec2(normal_noise_tiling * 0.01);
-	// The Unity shader has a quite complex calculation for the offset, but it is set to 0 through a constant.
-	vec4 prj1 = top_down_projection(world_pos, world_normal, noise_texture, vec2(tiling), vec2(0,0));
-	vec4 prj2 = top_down_projection(world_pos, world_normal, noise_texture, vec2(tiling * 0.5), vec2(0,0));
-	vec2 normal_uv = vec2(prj1.r * prj2.r * normal_noise_intensity) + normal_offset;
-
-	// Break up the repetition of the normal map by overlaying multiple scaled versions
-	vec2 panned_uv = normal_uv + panner(vec2(0.0), normal_pan_speed * 0.02);
-
-	float tiling_factor = normal_tiling * 0.04;
-	vec4 prj_n1 = top_down_projection(world_pos, world_normal, normal_texture, vec2(tiling_factor), panned_uv);
-	vec4 prj_n2 = top_down_projection(world_pos, world_normal, normal_texture, vec2(tiling_factor * 0.2), panned_uv * vec2(1.0, -1.0));
-	vec3 normal_blend = normalize(vec3(prj_n1.xy + prj_n2.xy, prj_n1.z * prj_n2.z));
-
-	return normal_blend;
-}
-
-float water_transparency(float shallows_depth, float depth_fade) {
-	return 1.0 - remap01(saturate_value(depth_fade / maximum_depth), shallows_opacity, 1.0);
-}
-
-float fresnel_mask(vec3 normal_ws, vec3 view_dir_ws) {
-    float fresnel_effect = pow(1.0 - clamp(dot(normalize(normal_ws), normalize(view_dir_ws)), 0.0, 1.0), fade_distance);
-	return smoothstep(0.0, 1.0, 1.0 - fresnel_effect * fade_power) * normal_intensity;
-}
-
-vec4 ocean_waves(vec2 uv, float speed, float height, vec3 wind_dir, float gale_strenght) {
-	vec2 pan_uv = uv + normalize(wind_dir).xz * TIME/10.0;
-	vec4 sample;
-	if(use_global_weather_controller) {
-		sample = texture(OceanWavesGradient, pan_uv * ocean_wave_frequency);
-	} else {
-		sample = texture(non_global_ocean_waves_gradient, pan_uv * ocean_wave_frequency);
-	}
-	float wave_height = height * sample.z * (gale_strenght * 1.5);
-	return vec4(0.0, wave_height, 0.0, sample.r);
-}
-
-/////////// VERTEX
-
-varying float wave_z_offset;
-varying vec3 world_pos;
-
+// ==========================================
+// VERTEX PASS
+// ==========================================
 void vertex() {
-	world_pos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
-
-	if (enable_ocean_waves) {
-		vec2 uv_w = (MODEL_MATRIX * vec4(UV.x, 0.0, UV.y, 1.0)).xz;
-
-		vec4 vertex;
-		if (use_global_weather_controller) {
-			vertex = ocean_waves(uv_w, ocean_wave_speed, ocean_wave_height, WindDirection, GaleStrength);
-		} else {
-			vertex = ocean_waves(uv_w, ocean_wave_speed, ocean_wave_height, non_global_wind_direction, non_global_gale_strength);
-		}
-
-		wave_z_offset = vertex.w;
-		VERTEX += vertex.xyz - vec3(0.0, ocean_wave_height/2.0, 0.0);
-	}
+    vec3 world_pos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
+    vec3 time_params = vec3(TIME, 0.0, 0.0);
+    
+    float wave_y;
+    float wave_z_offset;
+    SG_OceanWaveMask(
+        _Ocean_Wave_Speed, 
+        _OceanWaveGradient, 
+        _Ocean_Wave_Height, 
+        vec3(1.0, 0.0, 1.0), 
+        1.0, 
+        world_pos, 
+        time_params, 
+        wave_y, 
+        wave_z_offset
+    );
+    
+if (_Enable_Ocean_Wave > 0.5) {
+    vec3 world_v = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
+    
+    world_v.y += wave_y - (_Ocean_Wave_Height * 0.5);
+    
+    VERTEX = (inverse(MODEL_MATRIX) * vec4(world_v, 1.0)).xyz;
 }
 
-/////////// FRAGMENT
+    TANGENT = vec3(1.0, 0.0, 0.0);
+    BINORMAL = vec3(0.0, 0.0, 1.0);
+}
 
+// ==========================================
+// FRAGMENT PASS
+// ==========================================
 void fragment() {
-	float effect_alpha_cover = 0.0;
-	float fresnel = normal_intensity;
+    vec3 world_pos = (INV_VIEW_MATRIX * vec4(VERTEX, 1.0)).xyz;
+    vec3 world_normal = (INV_VIEW_MATRIX * vec4(NORMAL, 0.0)).xyz;
+    vec3 world_view_dir = (INV_VIEW_MATRIX * vec4(VIEW, 0.0)).xyz;
+    
+    float IN_PixelDepth = -VERTEX.z; 
+    float raw_depth = texture(DEPTH_TEXTURE, SCREEN_UV).x;
+    vec3 ndc = vec3(SCREEN_UV * 2.0 - 1.0, raw_depth);
+    
+    vec4 view_pos_scene = INV_PROJECTION_MATRIX * vec4(ndc, 1.0);
+    
+    float safe_w = view_pos_scene.w;
+    safe_w = sign(safe_w + 0.000001) * max(abs(safe_w), 0.00001);
+    
+    view_pos_scene.xyz /= safe_w;
+    view_pos_scene.xyz = clamp(view_pos_scene.xyz, vec3(-10000.0), vec3(10000.0));
+    
+    float linear_scene_depth = max(-view_pos_scene.z, 0.0);
+    
+    vec4 world_pos_scene = INV_VIEW_MATRIX * vec4(view_pos_scene.xyz, 1.0);
+    vec2 scene_uv = world_pos_scene.xz; 
+    
+    float depth_diff = max(linear_scene_depth - IN_PixelDepth, 0.0);
+    
+    float deep_ratio = clamp(depth_diff / max(abs(_Deep_Height), 0.001), 0.0, 1.0);
+    vec4 deep_lerp = mix(_Deep_Color, _Shallow_Color, 1.0 - deep_ratio);
+    
+    float very_deep_ratio = clamp(depth_diff / max(abs(_Very_Deep_Height), 0.001), 0.0, 1.0);
+    float very_deep_grad = clamp(very_deep_ratio * 2.0, 0.0, 1.0);
+    vec4 water_base_color = mix(deep_lerp, _Very_Deep_Color, very_deep_grad);
+    
+    float caustics_intensity = Unity_Remap(_Caustics_Intensity, vec2(0.0, 1.0), vec2(0.0, 10.0));
+    float voronoi_time = (TIME + 100.0) * 2.0;
+    float voronoi_out, voronoi_cells;
+    Unity_Voronoi_Deterministic(scene_uv, voronoi_time, 3.0, voronoi_out, voronoi_cells);
+    float voronoi_pow = clamp(pow(voronoi_out, 4.0), 0.0, 1.0);
+    
+    vec2 caustics_uv_base = fract(scene_uv / max(_Caustics_Scale, 0.01));
+    float caustics_speed = Unity_Remap(_Caustics_Speed, vec2(0.0, 1.0), vec2(0.0, 10.0));
+    float current_frame = mod(floor(TIME * caustics_speed), 64.0);
+    
+    float frame_x = mod(current_frame, 8.0);
+    float frame_y = floor(current_frame / 8.0);
+    
+    vec2 flipbook_uv = vec2(
+        (caustics_uv_base.x + frame_x) / 8.0,
+        (caustics_uv_base.y + (7.0 - frame_y)) / 8.0
+    );
+    
+    float caustics_tex = texture(_SampleTexture2D_c5bda943a6134644bb954c2c5ced7db4_Texture_1_Texture2D, flipbook_uv).r;
+    float caustics_val = _Caustics_Use_Voronoi_Noise > 0.5 ? voronoi_pow : caustics_tex;
+    
+    float caustics_fade = clamp(depth_diff * 0.1, 0.0, 1.0);
+    float caustics_mask = (1.0 - caustics_fade) * caustics_fade * caustics_val * caustics_intensity;
+    vec4 caustics_color = _Enable_Caustics > 0.5 ? clamp(_Caustics_Color * caustics_mask, 0.0, 1.0) : vec4(0.0);
+    
+    float shore_time = _Enable_Shore_Animation > 0.5 ? TIME : _Animation_Offset;
+    float shore_speed = shore_time * _Shore_Wave_Speed;
+    
+    vec4 sn_col; float sn_r, sn_g, sn_b, sn_a;
+    SG_TopDownProjection(_Noise_Texture, vec2(_Shore_Edge_Noise_Scale * 0.005), vec2(0.0), world_normal, world_pos, sn_col, sn_r, sn_g, sn_b, sn_a);
+    
+    float shore_wave = mod(shore_speed + clamp(sn_r, 0.0, 1.0), 1.0);
+    float shore_return = Unity_Remap(_Shore_Wave_Return_Amount, vec2(0.0, 1.0), vec2(2.0, 1.0));
+    float shore_sine = sin(shore_wave * (3.141593 / shore_return));
+    float shore_dist = depth_diff + shore_sine;
+    
+    vec4 sfn_col; float sfn_r, sfn_g, sfn_b, sfn_a;
+    SG_TopDownProjection(_Shore_Foam_Noise_Texture, vec2(_Shore_Foam_Noise_Scale * 0.005), vec2(0.0), world_normal, world_pos, sfn_col, sfn_r, sfn_g, sfn_b, sfn_a);
+    
+    float shore_foam_pow = clamp(pow(sfn_r, 0.2), 0.0, 1.0);
+    float shore_wave_mask = clamp(shore_dist * shore_foam_pow, 0.0, 1.0);
+    
+    float shore_thick = Unity_Remap(clamp(_Shore_Wave_Thickness, 0.0, 1.0), vec2(0.0, 1.0), vec2(0.0, 0.99));
+    float shore_remap1 = 1.0 - clamp(Unity_Remap(shore_wave, vec2(0.0, 1.0), vec2(-1.0, 1.0)), 0.0, 1.0);
+    float shore_remap2 = 1.0 - clamp(Unity_Remap(shore_wave, vec2(0.0, 1.0), vec2(1.0, -3.0)), 0.0, 1.0);
+    
+    float shore_anim_mask = shore_remap1 * shore_remap2;
+    float shore_final_mask = clamp(floor(shore_wave_mask + (shore_thick * shore_anim_mask)) - floor(shore_wave_mask), 0.0, 1.0);
+    float shore_opacity = _Shore_Edge_Opacity / 1.5;
+    vec4 shore_wave_color = _Enable_Shore_Wave_Foam > 0.5 ? (_Shore_Wave_Color_Tint * mix(0.0, shore_final_mask, shore_opacity)) : vec4(0.0);
+    
+    float edge_fade = depth_diff / max(_Shore_Edge_Thickness, 0.001);
+    float edge_mask = 1.0 - clamp(pow(edge_fade, 2.0), 0.0, 1.0);
+    vec4 shore_edge_color = _Enable_Shore_Wave_Foam > 0.5 ? (_Shore_Wave_Color_Tint * edge_mask * _Shore_Edge_Opacity) : vec4(0.0);
+    
+    float small_foam_fade = 1.0 - clamp(depth_diff / 2.0, 0.0, 1.0);
+    vec4 ssf_col; float ssf_r, ssf_g, ssf_b, ssf_a;
+    SG_TopDownProjection(_Noise_Texture, vec2(_Shore_Small_Foam_Tiling * 0.01), vec2(TIME * 0.003), world_normal, world_pos, ssf_col, ssf_r, ssf_g, ssf_b, ssf_a);
+    
+    float small_foam_val = clamp(pow(ssf_r * (small_foam_fade * 0.8) * 5.0, 20.0), 0.0, 1.0);
+    float small_foam_op = _Shore_Small_Foam_Opacity / 3.0;
+    vec4 shore_small_color = _Enable_Shore_Foam > 0.5 ? (_Shore_Foam_Color_Tint * mix(0.0, small_foam_val, small_foam_op)) : vec4(0.0);
+    
+    vec4 gf_col; float gf_r, gf_g, gf_b, gf_a;
+    SG_TopDownProjection(_Noise_Texture, vec2(0.025), vec2(0.0), world_normal, world_pos, gf_col, gf_r, gf_g, gf_b, gf_a);
+    
+    float wave_y_frag; float wave_z_frag;
+    SG_OceanWaveMask(_Ocean_Wave_Speed, _OceanWaveGradient, _Ocean_Wave_Height, vec3(1.0,0.0,1.0), 1.0, world_pos, vec3(TIME, 0.0, 0.0), wave_y_frag, wave_z_frag);
+    
+    float foam_amt = Unity_Remap(_Ocean_Foam_Amount, vec2(0.0, 1.0), vec2(5.0, 1.0));
+    float foam_mask = clamp(pow(wave_z_frag, foam_amt), 0.0, 1.0);
+    float global_foam_base = clamp(gf_r * (foam_mask * _Ocean_Foam_Amount), 0.0, 1.0);
+    float global_fade = clamp(depth_diff * 0.05, 0.0, 1.0);
+    
+    vec4 ob_col; float ob_r, ob_g, ob_b, ob_a;
+    SG_TopDownProjection(_Noise_Texture, vec2(_Ocean_Foam_Breakup_Tiling * 0.001), vec2(TIME * -0.002, 0.0), world_normal, world_pos, ob_col, ob_r, ob_g, ob_b, ob_a);
+    
+    float ocean_foam_val = clamp(pow(clamp(global_fade * (global_foam_base * (ob_r + 0.18)), 0.0, 1.0) * 20.0, 20.0), 0.0, 1.0);
+    vec4 ocean_foam_color = _Enable_Global_Foam > 0.5 ? vec4(ocean_foam_val * _Ocean_Foam_Opacity) : vec4(0.0);
+    
+    vec2 scroll_uv = UV * _Scrolling_Texture_Tiling.xy + (1.0 - (_Scrolling_Texture_Direction.xy * TIME));
+    vec4 scroll_tex = texture(_Scrolling_Texture, scroll_uv);
+    vec4 scroll_color = _Scrolling_Texture_Tint * scroll_tex * _Scrolling_Texture_Opacity;
+    
+    float depth_fade_alpha_ratio = clamp(depth_diff / max(abs(_Deep_Height), 0.01), 0.0, 1.0);
+    float base_water_opacity = mix(_Shallows_Opacity, 1.0, depth_fade_alpha_ratio);
 
-	// Get the view direction in world coordinates by reversing the local view direction
-	vec3 view_dir_world = normalize((INV_VIEW_MATRIX * vec4(VIEW, 0.0)).xyz);
-	vec3 normal_world = normalize((INV_VIEW_MATRIX * vec4(NORMAL, 0.0)).xyz);
+    vec3 composition_rgb = water_base_color.rgb + caustics_color.rgb + shore_wave_color.rgb + shore_edge_color.rgb + shore_small_color.rgb + ocean_foam_color.rgb;
+    vec3 final_rgb = _Enable_Top_Scrolling_Texture > 0.5 ? (composition_rgb + scroll_color.rgb) : composition_rgb;
 
-	// Get the eye-depth of current buffer, the depth buffer linear distance and the distance between them.
-	// We'll be using them a lot.
-	float frag_depth = 1.0 / FRAGCOORD.w;
-	float bottom_depth = scene_depth(SCREEN_UV, INV_PROJECTION_MATRIX);
-	float depth_fade = bottom_depth - frag_depth;
-
-	// Set color to ocean depth
-	// The abs() seems superfluous, but let's use it in case reliance break some user code.
-	// The UNITY Synty graph use gradient sampling, but their sampling is on a black-white square-ramp gradient.
-	float corrected_deep = pow(1.0 - saturate_value(depth_fade / abs(deep_height)), 1.8);
-	float corrected_very_deep = pow(saturate_value(depth_fade / abs(very_deep_height)), 1.8);
-
-	ALBEDO = mix(mix(deep_color, shallow_color, corrected_deep), very_deep_color, corrected_very_deep).xyz;
-
-
-	if (enable_top_scrolling_texture) {
-		ALBEDO += water_top_scrolling(UV).xyz;
-	}
-
-	if (enable_caustics) {
-		ALBEDO += water_caustics(CAMERA_POSITION_WORLD,-CAMERA_DIRECTION_WORLD, view_dir_world, bottom_depth, depth_fade).xyz;
-	}
-
-	if (enable_shore_wave_foam) {
-		// Shore edge masks using depth pass
-		//-- we compute it here because it goes both in the alpha and in the albedo.
-		float shore_edge = (1.0 - saturate_value(pow(depth_fade / shore_edge_tickness, 2.0))) * shore_edge_opacity;
-		vec4 shore_edge_tint = shore_wave_color_tint * shore_edge;
-
-		ALBEDO += water_shore_waves(world_pos, normal_world, depth_fade).xyz + shore_edge_tint.xyz;
-		// make the edge opaque
-		effect_alpha_cover += shore_edge_tint.r;
-	}
-
-	if (enable_shore_foam) {
-		vec4 shore_foam = water_shore_foam(world_pos, normal_world, depth_fade);
-		ALBEDO += shore_foam.xyz;
-		// make the foam opaque
-		effect_alpha_cover += shore_foam.r;
-	}
-
-	if(enable_global_foam || enable_normals) {
-		fresnel = fresnel_mask(normal_world, view_dir_world);
-	}
-
-	if (enable_normals) {
-		// Water noise applied twice and panned in opposite directions then overlayed
-		// This is then fed into the UVs of the normal maps to create some water like distortion for the normals
-		NORMAL = mix(vec3(0.0, 0.0, 1.0), water_normal(world_pos, normal_world), fresnel);
-	} else {
-		NORMAL = vec3(0.5, 0.5, 1.0);
-	}
-
-	if (enable_global_foam) {
-		// World position sin wave generation
-		float foam = ocean_foam_amount;
-		float rev_foam = 5.0 - 4.0 * foam;
-		float foam_amount = saturate_value(pow(wave_z_offset, rev_foam)) * foam;
-		float noise_sample = top_down_projection(world_pos, normal_world, noise_texture, vec2(0.02), vec2(0.0)).r;
-		float noise_amount = saturate_value(noise_sample * foam_amount * 2.0);
-
-		float time_factor = TIME * -0.002;
-		float retiling = float(ocean_breakup_tiling) * 0.01;
-		float tile_sample = top_down_projection(world_pos, normal_world, noise_texture, vec2(retiling), vec2(time_factor, 2.0)).r;
-
-		// Apply noise to the wave mask to create foam effects
-		float depth_factor = saturate_value(depth_fade * 0.05) * 0.18 * tile_sample * noise_amount;
-		float depth_mutl = saturate_value(pow(depth_factor * 20.0, 20.0));
-
-		// TODO: Multiply by the fresnel mask
-		float fresnel = 3.0;
-		ALBEDO += depth_mutl * ocean_foam_opacity * fresnel;
-	}
-
-	// Compute the transparency: opacity - water shallow transparency + effect coverage.
-	float alpha = saturate_value(base_opacity - water_transparency(shallows_opacity, depth_fade) + effect_alpha_cover);
-
-	// Mix the alpha manually if we're using distortion.
-	if (enable_distortion) {
-		//ALBEDO += mix(water_distortion(UV, SCREEN_UV), very_deep_color.xyz, alpha);
-		ALBEDO += mix(water_distortion(UV, SCREEN_UV), vec3(0.0, 0.0, 0.0), alpha);
-	} else {
-		ALPHA = alpha;
-	}
-
-	METALLIC = metallic;
-	ROUGHNESS = 1.0 - smoothness;
-	AO = 1.0;
+    float total_foam_alpha = shore_wave_color.a + shore_edge_color.a + shore_small_color.a + ocean_foam_color.a;
+    float final_alpha = base_water_opacity + total_foam_alpha;
+    
+    float dist_speed = Unity_Remap(_Distortion_Speed, vec2(0.0, 1.0), vec2(0.0, 0.001));
+    vec2 dist_uv = UV + (vec2(dist_speed) * _Distortion_Direction.xy * TIME);
+    float dist_size = Unity_Remap(_Distortion_Size, vec2(0.0, 1.0), vec2(0.0, 200.0));
+    float dist_noise = Unity_GradientNoise_Deterministic(dist_uv, vec3(dist_size));
+    float dist_str = Unity_Remap(_Distortion_Strength, vec2(0.0, 1.0), vec2(0.0, 0.05));
+    
+    vec2 screen_uv_dist = SCREEN_UV + vec2(dist_noise * dist_str);
+    vec3 scene_color = texture(SCREEN_TEXTURE, screen_uv_dist).rgb * 0.65;
+    
+    vec3 out_color = _Enable_Distortion > 0.5 ? (final_rgb + scene_color) : final_rgb;
+    
+    float norm_tiling = Unity_Remap(_Normal_Tiling, vec2(0.0, 1.0), vec2(0.0, 0.04));
+    vec2 pan_uv = SG_Panner(vec2(0.0), vec2(_Normal_Pan_Speed * 0.02), vec3(TIME, 0.0, 0.0));
+    
+    vec4 nn_col; float nn_r, nn_g, nn_b, nn_a;
+    SG_TopDownProjection(_Noise_Texture, vec2(_Normal_Noise_Tiling * 0.01), vec2(0.0), world_normal, world_pos, nn_col, nn_r, nn_g, nn_b, nn_a);
+    
+    vec2 norm_uv1 = _Normal_Offset.xy + vec2(nn_r * _Normal_Noise_Intensity);
+    vec2 norm_proj_uv1 = norm_uv1 + pan_uv;
+    
+    vec4 n1_col; float n1_r, n1_g, n1_b;
+    SG_TopDownProjectionNormal(_Normal_Texture, vec2(norm_tiling), norm_proj_uv1, world_normal, world_pos, n1_col, n1_r, n1_g, n1_b);
+    
+    vec2 norm_proj_uv2 = norm_proj_uv1 * vec2(1.0, -1.0);
+    vec4 n2_col; float n2_r, n2_g, n2_b;
+    SG_TopDownProjectionNormal(_Normal_Texture, vec2(norm_tiling * 0.2), norm_proj_uv2, world_normal, world_pos, n2_col, n2_r, n2_g, n2_b);
+    
+    vec3 blended_normal = Unity_NormalBlend(n1_col.xyz, n2_col.xyz);
+    
+    float fresnel = Unity_FresnelEffect(world_normal, world_view_dir, _Fade_Distance);
+    float fade = smoothstep(0.0, 1.0, 1.0 - (_Fade_Power * fresnel));
+    float norm_fade = _Enable_Fresnel_Fade > 0.5 ? (fade * _Normal_Intensity) : _Normal_Intensity;
+    
+    vec3 final_normal = mix(vec3(0.0, 0.0, 1.0), blended_normal, norm_fade);
+    vec3 out_normal = _Enable_Normals > 0.5 ? final_normal : vec3(0.0, 0.0, 1.0);
+    
+    ALBEDO = out_color;
+    NORMAL_MAP = out_normal * 0.5 + 0.5; 
+    METALLIC = _Metallic;
+    ROUGHNESS = 1.0 - _Smoothness;
+    SPECULAR = 0.5;
+    
+    float alpha_clip = clamp(final_alpha - (1.0 - _Base_Opacity), 0.0, 1.0);
+    ALPHA = alpha_clip;
+    
+    ALPHA_SCISSOR_THRESHOLD = _AlphaClip > 0.5 ? 0.5 : 0.0;
 }

@@ -540,169 +540,147 @@ void vertex() {
 	float gale_strength;
 	float wind_intensity;
 
-	mat3 local_model = transpose(mat3(MODEL_MATRIX));
 	if (use_global_weather_controller) {
-		wind_direction = normalize(WindDirection * local_model);
+		wind_direction = normalize(WindDirection);
 		gale_strength = GaleStrength;
 		wind_intensity = clamp(WindIntensity, 0.0, 1.0);
 	} else {
-		wind_direction = normalize(non_global_wind_direction * local_model);
+		wind_direction = normalize(non_global_wind_direction);
 		gale_strength = non_global_gale_strength;
 		wind_intensity = non_global_wind_intensity;
 	}
 
-	float height_gradient = COLOR.r;
+	vec3 local_wind_dir = (inverse(MODEL_MATRIX) * vec4(wind_direction, 0.0)).xyz;
+	local_wind_dir *= vec3(1.0, 0.0, 1.0);
 
-	vec3 blended_gale;
-	// Skip some pretty complicated logic if we don't need gale.
-	if(gale_strength > 0.0) {
-		// Gale has a very subtle effect, barely noticeable in bushes when you approach them.
-		// It has also a feedback in the strong wind, so that it's not canceled under it.
-		blended_gale = make_glade(VERTEX, wind_direction, gale_strength, height_gradient);
-	} else {
-		blended_gale = VERTEX;
+	float gale_disp = (sin(TIME) * 0.5 + 0.5) * (gale_strength * 20.0) + (gale_strength * 50.0);
+	vec3 gale_pos = rotate_around_axis(VERTEX, local_wind_dir, gale_disp / 180.0 * PI);
+	
+	float gale_mask = COLOR.r * gale_blend;
+	vec3 blended_gale = mix(VERTEX, gale_pos, gale_mask);
+
+	vec3 obj_pos_ws = MODEL_MATRIX[3].xyz;
+	float time_pos = TIME + obj_pos_ws.x + obj_pos_ws.z;
+
+	vec3 strong_wind_pos = blended_gale;
+	if (enable_strong_wind) {
+		float freq_factor = (gale_strength + 2.0) * 1.5 * strong_wind_frequency;
+		float sw_sin = sin(time_pos * freq_factor);
+		vec3 strong_wind_offset = local_wind_dir * (sw_sin * strong_wind_strength * 5.0);
+		strong_wind_pos += strong_wind_offset;
 	}
 
+	vec3 twisted_pos = strong_wind_pos;
+	if (enable_wind_twist) {
+		float twist_sin = sin(time_pos * strong_wind_frequency);
+		float twist_angle = twist_sin * wind_twist_strength * 40.0;
+		twisted_pos = rotate_around_y(strong_wind_pos, twist_angle);
+	}
+
+	vec3 light_wind_offset = vec3(0.0);
+	if (enable_light_wind) {
+		float remapped_gale = mix(0.25, 1.0, gale_strength);
+		float lw_time = TIME * remapped_gale * 0.2;
+		
+		vec2 lw_uv = (local_wind_dir.xz * -1.0 * lw_time) + (obj_pos_ws.xz * 0.01);
+		float noise = three_octaves_noise(lw_uv, 50.0);
+		
+		float offset_val = (1.0 - light_wind_y_offset) * 0.5;
+		float lw_mask = (noise - offset_val) * 2.0;
+		
+		vec3 lw_normal = NORMAL * vec3(1.0, light_wind_y_strength, 1.0);
+		float fade_mask = light_wind_use_leaf_fade ? COLOR.g : COLOR.b;
+		
+		light_wind_offset = lw_normal * lw_mask * (light_wind_strength * 3.0) * fade_mask;
+	}
+
+	vec3 breeze_offset = vec3(0.0);
+	if (enable_breeze) {
+		float br_time = TIME * 0.01;
+		vec2 br_uv = (local_wind_dir.xz * br_time) + (obj_pos_ws.xz * 0.01);
+		
+		float noise = three_octaves_noise(br_uv, 1000.0);
+		float br_mask = (noise - 0.5) * 2.0;
+		
+		float remapped_gale_br = mix(2.0, 4.0, gale_strength);
+		vec3 br_strength_vec = vec3(breeze_strength, 0.0, breeze_strength) * remapped_gale_br;
+		
+		breeze_offset = NORMAL * br_mask * br_strength_vec * COLOR.g;
+	}
+
+	vec3 total_wind_pos = twisted_pos + light_wind_offset + breeze_offset;
+	
+	float wind_mask = use_vertex_color_wind ? COLOR.r : (VERTEX.y * 0.5);
+	
+	vec3 final_pos = mix(blended_gale, total_wind_pos, wind_mask);
+	VERTEX = mix(VERTEX, final_pos, wind_intensity);
+	
 	world_vertex = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
+	world_normal = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz);
 	local_normal = NORMAL;
-	world_normal = (MODEL_MATRIX * vec4(NORMAL, 0.1)).xyz;
-
-	// Strong wind wants the global rendered object origin, not the vertex position.
-	vec3 strong_wind = make_strong_wind(MODEL_MATRIX[3].xyz, wind_direction, blended_gale, gale_strength);
-	vec3 light_wind = make_light_wind(world_vertex, world_normal, COLOR, wind_direction, gale_strength);
-	vec3 breeze = make_breeze(world_vertex, world_normal, COLOR, wind_direction, gale_strength);
-
-	vec3 wind_component = strong_wind + light_wind + breeze;
-
-	float gale_factor = use_vertex_color_wind ? height_gradient : VERTEX.y * 0.5;
-	vec3 wind_and_gale = mix(blended_gale, wind_component, gale_factor);
-
-	float jitter_time = TIME * jitter_freq * 10.0;
-	vec3 jitter_offset = vec3(
-		sin(jitter_time + world_vertex.x), 
-		cos(jitter_time + world_vertex.y) * y_multiplier, 
-		sin(jitter_time + world_vertex.z)
-	) * jitter_amount * 0.1;
-	if (COLOR.b > 0.5) {
-		wind_and_gale += jitter_offset * height_gradient;
-	}
-
-	float gust_time = TIME * gust_large_freq * 5.0;
-	float gust_wave = sin(world_vertex.x * gust_scale + gust_time) + cos(world_vertex.z * gust_scale + gust_time);
-	gust_wave = smoothstep(0.0, 1.0, gust_wave * 0.5 + 0.5); 
-	vec3 gust_offset = wind_direction * gust_wave * gust_amount;
-	wind_and_gale += gust_offset * height_gradient;
-	alpine_gust_mask = gust_wave * (COLOR.b > 0.5 ? 1.0 : 0.0);
-
-	VERTEX = mix(VERTEX, wind_and_gale, wind_intensity);  // Object
+	alpine_gust_mask = 0.0;
 }
 
 
 /////// FRAGMENT
 void fragment() {
-	// Meshes are painted with a high blue value if they are leaves; else they are trunks.
+	float is_leaf = step(0.5, COLOR.b);
 
-	vec3 emission = vec3(0.0);
-	if (COLOR.b > 0.5) {
+	vec2 leaf_uv = (UV * leaf_tiling) + leaf_offset;
+	vec2 trunk_uv = (UV * trunk_tiling) + trunk_offset;
 
-		// Noise and base
-		vec4 texture_color = texture(leaf_color, (UV * leaf_tiling) + leaf_offset);
-		float texture_alpha = texture_color.a;
+	vec4 leaf_tex = texture(leaf_color, leaf_uv);
+	vec4 trunk_tex = texture(trunk_color, trunk_uv);
 
-		if (leaf_flat_color) {
-			texture_color.rgb = leaf_base_color.rgb;
-		}
-
-		if (use_color_noise) {
-			vec4 noise_color = compute_leaf_noise(world_vertex);
-			if(leaf_flat_color) {
-				texture_color = noise_color;
-			} else {
-				texture_color *= noise_color;
-			}
-		}
-
-		// Frosting
-		if(enable_frosting) {
-			vec3 normal = frosting_use_world_normal ? world_normal : local_normal;
-			float frost_level = clamp(pow(normal.y, frosting_height) * frosting_falloff, 0.0, 1.0);
-			texture_color = mix(texture_color, frosting_color, frost_level);
-		}
-
-		ALBEDO = mix(texture_color.rgb, gust_highlight.rgb, alpine_gust_mask * 0.5);
-		ALPHA = texture_alpha;
-		METALLIC = leaf_metallic;
-		ROUGHNESS = 1.0 - leaf_smoothness;
-		AO = mix(1, texture(leaf_ao, UV * leaf_tiling + leaf_offset).r, leaf_ao_intensity);
-
-		if (enable_leaf_normal) {
-			BINORMAL = triplanar_map(
-				normalize((VIEW_MATRIX * vec4(0.,-1.,0.,0)).xyz),
-				normalize((VIEW_MATRIX * vec4(0.,0.,1.,0)).xyz),
-				normalize((VIEW_MATRIX * vec4(0,-1.,0.,0)).xyz),
-				world_normal
-			);
-
-			TANGENT = triplanar_map(
-				normalize((VIEW_MATRIX * vec4(0.,1.,0.,-1.)).xyz),
-				normalize((VIEW_MATRIX * vec4(1.,0.,0.,1.)).xyz),
-				normalize((VIEW_MATRIX * vec4(0,0.,1.,-1.)).xyz),
-				world_normal
-			);
-			NORMAL_MAP = texture(leaf_normal, (UV * leaf_normal_tiling) + leaf_normal_offset).rgb * leaf_normal_strength;
-		}
-
-		if (enable_emission) {
-			EMISSION = leaf_emissive(UV).rgb * emissive_amount * 1.5;
-		}
-	} else {
-		vec4 texture_color = texture(trunk_color, (UV * trunk_tiling) + trunk_offset);
-		float texture_alpha = texture_color.a;
-
-		if (trunk_flat_color) {
-			texture_color.rgb = trunk_base_color.rgb;
-		}
-
-		if (use_color_noise) {
-			vec4 noise_color = compute_trunk_noise(world_vertex);
-			if(trunk_flat_color) {
-				texture_color = noise_color;
-			} else {
-				texture_color *= noise_color;
-			}
-		}
-
-		ALBEDO = texture_color.rgb;
-		ALPHA = texture_alpha;
-		METALLIC = trunk_metallic;
-		ROUGHNESS = 1.0 - trunk_smoothness;
-		AO = mix(1, texture(trunk_ao, UV * trunk_tiling + trunk_offset).r, trunk_ao_intensity);
-
-		if (enable_trunk_normal) {
-			BINORMAL = triplanar_map(
-				normalize((VIEW_MATRIX * vec4(0.,-1.,0.,0)).xyz),
-				normalize((VIEW_MATRIX * vec4(0.,0.,1.,0)).xyz),
-				normalize((VIEW_MATRIX * vec4(0,-1.,0.,0)).xyz),
-				world_normal
-			);
-
-			TANGENT = triplanar_map(
-				normalize((VIEW_MATRIX * vec4(0.,1.,0.,-1.)).xyz),
-				normalize((VIEW_MATRIX * vec4(1.,0.,0.,1.)).xyz),
-				normalize((VIEW_MATRIX * vec4(0,0.,1.,-1.)).xyz),
-				world_normal
-			);
-
-			NORMAL_MAP = texture(trunk_normal, (UV * trunk_normal_tiling) + trunk_normal_offset).rgb * trunk_normal_strength;
-		}
-
-		if (enable_emission) {
-			EMISSION = trunk_emissive(UV).rgb * emissive_amount * 1.5;
-		}
+	if (leaf_flat_color) {
+		leaf_tex.rgb = leaf_base_color.rgb;
+	}
+	if (trunk_flat_color) {
+		trunk_tex.rgb = trunk_base_color.rgb;
 	}
 
-	if (enable_pulse) {
-		EMISSION *= compute_pulse(world_vertex, UV);
+	if (use_color_noise) {
+		vec4 l_noise = compute_leaf_noise(world_vertex);
+		vec4 t_noise = compute_trunk_noise(world_vertex);
+
+		leaf_tex.rgb = leaf_flat_color ? l_noise.rgb : (leaf_tex.rgb * l_noise.rgb);
+		trunk_tex.rgb = trunk_flat_color ? t_noise.rgb : (trunk_tex.rgb * t_noise.rgb);
+	}
+
+	if (enable_frosting) {
+		vec3 frost_normal = frosting_use_world_normal ? world_normal : local_normal;
+		float frost_level = clamp(pow(max(frost_normal.y, 0.0), frosting_height) * frosting_falloff, 0.0, 1.0);
+		leaf_tex.rgb = mix(leaf_tex.rgb, frosting_color.rgb, frost_level);
+	}
+
+	ALBEDO = mix(trunk_tex.rgb, leaf_tex.rgb, is_leaf);
+	ALPHA = mix(trunk_tex.a, leaf_tex.a, is_leaf);
+	ALPHA_SCISSOR_THRESHOLD = alpha_clip_threshold;
+
+	METALLIC = mix(trunk_metallic, leaf_metallic, is_leaf);
+	ROUGHNESS = mix(1.0 - trunk_smoothness, 1.0 - leaf_smoothness, is_leaf);
+
+	float leaf_ao_val = mix(1.0, texture(leaf_ao, leaf_uv).r, leaf_ao_intensity);
+	float trunk_ao_val = mix(1.0, texture(trunk_ao, trunk_uv).r, trunk_ao_intensity);
+	AO = mix(trunk_ao_val, leaf_ao_val, is_leaf);
+
+	if (enable_leaf_normal || enable_trunk_normal) {
+		vec3 default_normal = vec3(0.5, 0.5, 1.0);
+		
+		vec3 l_norm = enable_leaf_normal ? texture(leaf_normal, (UV * leaf_normal_tiling) + leaf_normal_offset).rgb : default_normal;
+		vec3 t_norm = enable_trunk_normal ? texture(trunk_normal, (UV * trunk_normal_tiling) + trunk_normal_offset).rgb : default_normal;
+		
+		NORMAL_MAP = mix(t_norm, l_norm, is_leaf);
+		NORMAL_MAP_DEPTH = mix(trunk_normal_strength, leaf_normal_strength, is_leaf);
+	}
+
+	if (enable_emission) {
+		vec3 l_em = leaf_emissive(UV).rgb * emissive_amount * 1.5;
+		if (enable_pulse) {
+			l_em *= compute_pulse(world_vertex, UV);
+		}
+		vec3 t_em = trunk_emissive(UV).rgb * emissive_amount * 1.5;
+		EMISSION = mix(t_em, l_em, is_leaf);
 	}
 
 	if(mesh_single_faced && !FRONT_FACING) {

@@ -490,23 +490,13 @@ func save_fbx_as_single_scene(scene_root: Node, mesh_instances: Array[MeshInstan
 
 		# Apply materials as overrides
 		for i in range(original_mesh.get_surface_count()):
-			if i < material_names.size() and material_names[i] != "":
-				var mat_name := material_names[i]
-				var material_path := find_material_path(mat_name, materials_dir)
+			var mat_name := ""
+			if i < material_names.size():
+				mat_name = material_names[i]
 
-				if material_path.is_empty():
-					print("      Warning: Material not found: %s" % mat_name)
-					warnings += 1
-					continue
-
-				var material: Material = load(material_path)
-				if material == null:
-					print("      Warning: Failed to load material: %s" % material_path)
-					warnings += 1
-					continue
-
-				mesh_instance.set_surface_override_material(i, material)
-				materials_applied += 1
+			var material = _get_or_create_material(mat_name, mesh_name, materials_dir, fbx_name)
+			mesh_instance.set_surface_override_material(i, material)
+			materials_applied += 1
 
 	# Determine output path
 	var meshes_dir := current_pack_folder + "/meshes/" + _get_mesh_subfolder()
@@ -706,24 +696,13 @@ func extract_and_save_mesh(mesh_instance: MeshInstance3D, relative_dir: String, 
 	# Materials are in the current pack's materials/ folder
 	var materials_dir := current_pack_folder + "/materials"
 	for i in range(original_mesh.get_surface_count()):
-		if i < material_names.size() and material_names[i] != "":
-			var mat_name := material_names[i]
-			# Use fallback logic to find material (handles prefix mismatches)
-			var material_path := find_material_path(mat_name, materials_dir)
-
-			if material_path.is_empty():
-				print("      Warning: Material not found: %s (tried fallbacks)" % mat_name)
-				warnings += 1
-				continue
-
-			var material: Material = load(material_path)
-			if material == null:
-				print("      Warning: Failed to load material: %s" % material_path)
-				warnings += 1
-				continue
-
-			scene_mesh_instance.set_surface_override_material(i, material)
-			materials_applied += 1
+		var mat_name := ""
+		if i < material_names.size():
+			mat_name = material_names[i]
+		print("DEBUG TRIGGER -> Mesh: '%s' | Mat: '%s' | FBX: '%s'" % [mesh_name, mat_name, fbx_name])
+		var material = _get_or_create_material(mat_name, mesh_name, materials_dir, fbx_name)
+		scene_mesh_instance.set_surface_override_material(i, material)
+		materials_applied += 1
 
 	# Handle duplicate mesh names by appending FBX source name
 	if saved_mesh_names.has(output_path):
@@ -1291,3 +1270,63 @@ func print_summary() -> void:
 	else:
 		print("")
 		print("All meshes converted successfully!")
+
+var _material_cache: Dictionary = {}
+
+func _get_or_create_material(mat_name: String, mesh_name: String, materials_dir: String, fbx_name: String = "") -> Material:
+	var lookup_name = mat_name
+	
+	if lookup_name.is_empty() or "lambert" in lookup_name.to_lower():
+		lookup_name = mesh_name 
+
+	var cache_key = lookup_name + "_" + fbx_name
+	if _material_cache.has(cache_key):
+		return _material_cache[cache_key]
+
+	var material: Material = null
+	
+	var search_string = (lookup_name + " " + mesh_name + " " + fbx_name).to_lower()
+
+	if "water" in search_string or "river" in search_string or "lake" in search_string or "ice" in search_string:
+		var sm = ShaderMaterial.new()
+		sm.shader = load("res://shaders/water.gdshader")
+		if sm.shader != null:
+			sm.set_shader_parameter("deep_color", Color(0.209, 0.509, 0.497, 1.0))
+			sm.set_shader_parameter("shallow_color", Color(0.332, 0.723, 0.792, 1.0))
+			sm.set_shader_parameter("beers_law", 0.697)
+		print("      Forced custom Water shader for: %s (from FBX: %s)" % [lookup_name, fbx_name])
+		material = sm
+
+	elif "cloud" in search_string or "fog" in search_string or "aurora" in search_string:
+		var sm = ShaderMaterial.new()
+		sm.shader = load("res://shaders/clouds.gdshader")
+		print("      Forced custom Cloud/Aurora shader for: %s (from FBX: %s)" % [lookup_name, fbx_name])
+		material = sm
+
+	elif "cutout" in search_string or "leaf" in search_string or "grass" in search_string:
+		var std = StandardMaterial3D.new()
+		std.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
+		std.alpha_scissor_threshold = 0.5
+		print("      Forced Alpha Scissor for: %s (from FBX: %s)" % [lookup_name, fbx_name])
+		material = std
+
+	elif "glass" in search_string or "crystal" in search_string:
+		var sm = ShaderMaterial.new()
+		sm.shader = load("res://shaders/crystal.gdshader")
+		print("      Forced Crystal/Glass shader for: %s (from FBX: %s)" % [lookup_name, fbx_name])
+		material = sm
+
+	if material == null:
+		var material_path := find_material_path(lookup_name, materials_dir)
+		if not material_path.is_empty():
+			material = load(material_path)
+
+	if material == null:
+		var fallback = ShaderMaterial.new()
+		fallback.shader = load("res://shaders/polygon.gdshader")
+		print("      Forced default shader for: %s" % lookup_name)
+		material = fallback
+
+	_material_cache[cache_key] = material
+	
+	return material

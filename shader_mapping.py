@@ -902,6 +902,7 @@ FLOAT_MAP_SKYDOME: dict[str, str] = {
 }
 
 FLOAT_MAP_CLOUDS: dict[str, str] = {
+    "_Scattering_Edge_Dist": "scattering_edge_dist",
     "_Light_Intensity": "light_intensity",
     "_Fresnel_Power": "fresnel_power",
     "_Fog_Density": "fog_density",
@@ -1104,6 +1105,7 @@ COLOR_MAP_CLOUDS: dict[str, str] = {
     # Aurora (Vikings, ElvenRealm)
     "_Aurora_Color_01": "aurora_color_01",
     "_Aurora_Color_02": "aurora_color_02",
+    "_Light_Direction_Override": "light_direction_override",
 }
 
 # Combined color map lookup by shader type

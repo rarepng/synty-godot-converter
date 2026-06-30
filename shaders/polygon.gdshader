@@ -81,7 +81,7 @@ application of the tri-planar normal map as closely as possible,
 considering the different rendering pipelines.
 ******************************************************************************/
 shader_type spatial;
-render_mode blend_mix, depth_draw_opaque, cull_back;
+render_mode blend_mix, depth_draw_opaque, cull_back, depth_prepass_alpha;
 
 group_uniforms Base;
 uniform vec4 color_tint : source_color = vec4(1.0);

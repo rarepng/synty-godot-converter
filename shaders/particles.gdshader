@@ -74,7 +74,7 @@ for objects emerging from the fog, it should be dynamically set by a script.
 
 */
 shader_type spatial;
-render_mode blend_mix;
+render_mode blend_mix, cull_disabled;
 
 uniform float alpha_clip_treshold: hint_range(0.0, 1.0) = 0.5;
 uniform vec4 base_color: source_color = vec4(1.0);
