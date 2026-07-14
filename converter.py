@@ -925,7 +925,7 @@ def find_texture_file(
     return None
 
 
-def generate_texture_import_file(texture_path: Path, high_quality: bool = False) -> None:
+def generate_texture_import_file(texture_path: Path, res_path: str, high_quality: bool = False) -> None:
     """Generate a .import sidecar file for a texture with compression settings.
 
     Creates a Godot .import file that configures the texture compression mode.
@@ -989,6 +989,7 @@ def copy_textures(
     texture_name_to_guid: dict[str, str] | None = None,
     additional_texture_dirs: list[Path] | None = None,
     high_quality_textures: bool = False,
+    texture_base_res_path: str = "res://textures",
 ) -> tuple[int, int, int]:
     """Copy required texture files from SourceFiles/Textures to output/textures/.
 
@@ -1068,7 +1069,7 @@ def copy_textures(
                 logger.debug("[DRY RUN] Would copy texture from temp: %s", texture_name)
             else:
                 shutil.copy2(temp_path, dest_path)
-                generate_texture_import_file(dest_path, high_quality_textures)
+                generate_texture_import_file(dest_path, f"{texture_base_res_path}/{texture_name}", high_quality_textures)
                 logger.debug("Copied texture from temp: %s", texture_name)
 
             copied += 1
@@ -1100,7 +1101,7 @@ def copy_textures(
                     )
                 else:
                     shutil.copy2(fallback_texture, dest_path)
-                    generate_texture_import_file(dest_path, high_quality_textures)
+                    generate_texture_import_file(dest_path, f"{texture_base_res_path}/{dest_name}", high_quality_textures)
                     logger.debug(
                         "Copied fallback texture: %s -> %s (for missing %s)",
                         fallback_texture.name, dest_name, texture_name
@@ -1127,7 +1128,7 @@ def copy_textures(
             logger.debug("[DRY RUN] Would copy texture: %s -> %s", source_path.name, dest_name)
         else:
             shutil.copy2(source_path, dest_path)
-            generate_texture_import_file(dest_path, high_quality_textures)
+            generate_texture_import_file(dest_path, f"{texture_base_res_path}/{dest_name}", high_quality_textures)
             if source_path.name != dest_name:
                 logger.debug("Copied texture: %s -> %s (renamed)", source_path.name, dest_name)
             else:
@@ -1968,7 +1969,6 @@ def get_filtered_material_names(
     filtered_materials: set[str] = set()
 
     for prefab in prefabs:
-        # Check if prefab name matches filter
         if pattern_lower in prefab.prefab_name.lower():
             for mesh in prefab.meshes:
                 for slot in mesh.slots:
@@ -2010,6 +2010,75 @@ def filter_textures_for_materials(
 
     return filtered_textures
 
+def parse_unity_prefabs_from_package(guid_map: GuidMap) -> dict[str, list[dict]]:
+    """Parses Unity .prefab files to extract exact Mesh to Material mappings for all variants.
+    
+    Bypasses MaterialList.txt to read the raw Unity YAML. Links MeshFilters (meshes) 
+    to MeshRenderers (materials) using their shared m_GameObject fileID.
+    """
+    prefab_mapping = {}
+
+    for guid, pathname in guid_map.guid_to_pathname.items():
+        if not pathname.lower().endswith('.prefab'):
+            continue
+
+        content_bytes = guid_map.guid_to_content.get(guid)
+        if not content_bytes:
+            continue
+
+        content = content_bytes.decode('utf-8', errors='ignore')
+        prefab_name = Path(pathname).stem
+
+        filters = {} 
+        renderers = {}
+
+        blocks = content.split('--- !u!')
+        for block in blocks:
+            if block.startswith('33 &'):
+                go_match = re.search(r'm_GameObject:\s*\{fileID:\s*(\d+)\}', block)
+                mesh_match = re.search(r'm_Mesh:\s*\{fileID:\s*\d+,\s*guid:\s*([a-fA-F0-9]{32})', block)
+                if go_match and mesh_match:
+                    go_id = go_match.group(1)
+                    mesh_guid = mesh_match.group(1)
+                    mesh_path = guid_map.guid_to_pathname.get(mesh_guid)
+                    if mesh_path:
+                        filters[go_id] = Path(mesh_path).stem
+
+            elif block.startswith('23 &'):
+                go_match = re.search(r'm_GameObject:\s*\{fileID:\s*(\d+)\}', block)
+                if go_match:
+                    go_id = go_match.group(1)
+                    mat_names = []
+                    
+                    if 'm_Materials:' in block:
+                        mats_block = block.split('m_Materials:')[1]
+                        guids = re.findall(r'guid:\s*([a-fA-F0-9]{32})', mats_block)
+                        for mat_guid in guids:
+                            mat_path = guid_map.guid_to_pathname.get(mat_guid)
+                            if mat_path:
+                                mat_names.append(Path(mat_path).stem)
+                            else:
+                                mat_names.append("")
+                                
+                    renderers[go_id] = mat_names
+
+        mesh_list = []
+        for go_id, mesh_name in filters.items():
+            mats = renderers.get(go_id, [])
+            mesh_list.append({
+                "mesh_name": mesh_name,
+                "materials": mats
+            })
+
+        if mesh_list:
+            base_name = prefab_name
+            counter = 1
+            while prefab_name in prefab_mapping:
+                prefab_name = f"{base_name}_{counter}"
+                counter += 1
+            prefab_mapping[prefab_name] = mesh_list
+
+    return prefab_mapping
 
 def run_conversion(config: ConversionConfig) -> ConversionStats:
     """Execute the full conversion pipeline.
@@ -2321,6 +2390,7 @@ def run_conversion(config: ConversionConfig) -> ConversionStats:
                 texture_name_to_guid=texture_name_to_guid,
                 additional_texture_dirs=additional_texture_dirs,
                 high_quality_textures=config.high_quality_textures,
+                texture_base_res_path=texture_base,
             )
 
             # Step 9: Copy FBX files
@@ -2397,37 +2467,38 @@ def run_conversion(config: ConversionConfig) -> ConversionStats:
                     generate_mesh_material_mapping_json(prefabs, mapping_output)
                     logger.debug("Generated mesh_material_mapping.json to pack folder")
 
-                # Check for missing material references (no placeholders - just warn)
-                if not config.dry_run:
-                    logger.debug("Checking for missing material references...")
-                    materials_dir = pack_output_dir / "materials"
-                    existing_materials = {f.stem for f in materials_dir.glob("*.tres")}
-
-                    # Collect all referenced materials from prefabs
-                    referenced_materials: set[str] = set()
-                    for prefab in prefabs:
-                        for mesh in prefab.meshes:
-                            for slot in mesh.slots:
-                                if slot.material_name:
-                                    referenced_materials.add(slot.material_name)
-
-                    # Find missing materials - just warn, don't create placeholders
-                    missing_materials = referenced_materials - existing_materials
-                    stats.materials_missing = len(missing_materials)
-
-                    if missing_materials:
-                        logger.debug(
-                            "Found %d missing material(s) - these meshes will use default materials:",
-                            len(missing_materials)
-                        )
-                        for mat_name in sorted(missing_materials):
-                            logger.debug("  Missing: %s", mat_name)
-                    else:
-                        logger.debug("All referenced materials exist")
-                else:
-                    logger.debug("Skipping missing materials check (dry run)")
+            prefab_mapping_output = pack_output_dir / "prefab_mapping.json"
+            if config.dry_run:
+                logger.debug("[DRY RUN] Would write prefab_mapping.json")
             else:
-                logger.debug("No MaterialList data available, skipping mesh-material mapping")
+                logger.debug("Parsing Unity .prefab files for exact variants...")
+                prefab_map = parse_unity_prefabs_from_package(guid_map)
+                with open(prefab_mapping_output, "w", encoding="utf-8") as f:
+                    json.dump(prefab_map, f, indent=2, ensure_ascii=False)
+                logger.debug("Generated prefab_mapping.json tracking %d variants", len(prefab_map))
+
+            if not config.dry_run and prefabs:
+                logger.debug("Checking for missing material references...")
+                materials_dir = pack_output_dir / "materials"
+                existing_materials = {f.stem for f in materials_dir.glob("*.tres")}
+
+                referenced_materials: set[str] = set()
+                for prefab in prefabs:
+                    for mesh in prefab.meshes:
+                        for slot in mesh.slots:
+                            if slot.material_name:
+                                referenced_materials.add(slot.material_name)
+
+                missing_materials = referenced_materials - existing_materials
+                stats.materials_missing = len(missing_materials)
+
+                if missing_materials:
+                    logger.debug(
+                        "Found %d missing material(s) - these meshes will use default materials:",
+                        len(missing_materials)
+                    )
+                else:
+                    logger.debug("All referenced materials exist")
 
         # Step 11: Generate or update project.godot
         logger.info("Step 11: Generating project.godot...")

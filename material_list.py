@@ -347,7 +347,7 @@ def get_mesh_to_materials_map(prefabs: list[PrefabMaterials]) -> dict[str, list[
                     names_to_map.add(f"{mesh.mesh_name}_LOD{i}")
                     
             for name in names_to_map:
-                if name in result and not has_custom_override:
+                if name in result and has_custom_override:
                     continue
                 result[name] = material_names
 

@@ -72,45 +72,37 @@ AUTO_ENABLE_RULES: dict[str, str] = {
     # -------------------------------------------------------------------------
     # Polygon Shader
     # -------------------------------------------------------------------------
-    "normal_texture": "enable_normal_texture",       # General normal mapping
-    "emission_texture": "enable_emission_texture",   # Emission/glow effects
-    "ao_texture": "enable_ambient_occlusion",        # Ambient occlusion maps
-    "overlay_texture": "enable_overlay_texture",     # Overlay texture blending
-    # Triplanar normal maps (all enable the same feature)
-    "triplanar_normal_top": "enable_triplanar_normals",
-    "triplanar_normal_side": "enable_triplanar_normals",
-    "triplanar_normal_bottom": "enable_triplanar_normals",
-    # Triplanar emission
-    "triplanar_emission_texture": "enable_triplanar_emission",
+    "AO_Texture": "Enable_Ambient_Occlusion",
+    "Triplanar_Normal_Texture_Top": "Enable_Triplanar_Normals",
+    "Triplanar_Normal_Texture_Side": "Enable_Triplanar_Normals",
+    "Triplanar_Normal_Texture_Bottom": "Enable_Triplanar_Normals",
+    "Triplanar_Emission_Texture": "Enable_Triplanar_Emission",
 
     # -------------------------------------------------------------------------
     # Foliage Shader
     # -------------------------------------------------------------------------
-    "leaf_normal": "enable_leaf_normal",             # Foliage leaf normal maps
-    "trunk_normal": "enable_trunk_normal",           # Foliage trunk normal maps
-    # Emission masks (all enable base emission)
+    "leaf_normal": "enable_leaf_normal",
+    "trunk_normal": "enable_trunk_normal",
     "emissive_mask": "enable_emission",
     "emissive_2_mask": "enable_emission",
     "trunk_emissive_mask": "enable_emission",
-    # Pulse effect
     "emissive_pulse_mask": "enable_pulse",
 
     # -------------------------------------------------------------------------
     # Crystal Shader
     # -------------------------------------------------------------------------
-    "top_albedo": "enable_top_projection",           # Top projection textures
+    "top_albedo": "enable_top_projection",
     "top_normal": "enable_top_projection",
-    "refraction_texture": "enable_refraction",       # Crystal refraction effect
+    "refraction_texture": "enable_refraction",
 
     # -------------------------------------------------------------------------
     # Water Shader
     # -------------------------------------------------------------------------
-    "water_normal_texture": "enable_normals",        # Water normal mapping
-    "shore_foam_noise_texture": "enable_shore_foam", # Shore foam effect
-    "foam_noise_texture": "enable_global_foam",      # Global foam effect
-    "noise_texture": "enable_global_foam",           # Global foam (alternative name)
-    "scrolling_texture": "enable_top_scrolling_texture",  # Scrolling surface texture
-    "caustics_flipbook": "enable_caustics",          # Underwater caustics
+    "_Normal_Texture": "_Enable_Normals",
+    "_Shore_Foam_Noise_Texture": "_Enable_Shore_Foam",
+    "_Noise_Texture": "_Enable_Global_Foam",
+    "_Scrolling_Texture": "_Enable_Top_Scrolling_Texture",
+    "_SampleTexture2D": "_Enable_Caustics",
 }
 
 # Prefix patterns that enable triplanar projection.
@@ -122,11 +114,10 @@ AUTO_ENABLE_RULES: dict[str, str] = {
 # above (e.g., triplanar_normal_top -> enable_triplanar_normals). These prefixes
 # handle the general triplanar texture projection enable.
 TRIPLANAR_PREFIXES: tuple[str, ...] = (
-    "triplanar_texture_",      # Base triplanar textures (albedo, etc.)
-    "triplanar_normal_",       # Triplanar normal maps
-    "triplanar_emission_",     # Triplanar emission textures
+    "Triplanar_Texture_",      
+    "Triplanar_Normal_Texture_",       
+    "Triplanar_Emission_",     
 )
-
 
 # =============================================================================
 # NUMBER FORMATTING
@@ -205,6 +196,18 @@ def format_color(r: float, g: float, b: float, a: float) -> str:
 
     return f"Color({fmt(r)}, {fmt(g)}, {fmt(b)}, {fmt(a)})"
 
+def format_vector4(x: float, y: float, z: float, w: float) -> str:
+    """Format a Vector4 for .tres output."""
+    def fmt(v: float) -> str:
+        formatted = f"{v:.6f}".rstrip("0")
+        if "." in formatted:
+            integer, decimal = formatted.split(".")
+            if len(decimal) < 1:
+                decimal = decimal.ljust(1, "0")
+            return f"{integer}.{decimal}"
+        return f"{formatted}.0"
+
+    return f"Vector4({fmt(x)}, {fmt(y)}, {fmt(z)}, {fmt(w)})"
 
 # =============================================================================
 # FILENAME UTILITIES
@@ -298,9 +301,9 @@ def _auto_enable_features(material: "MappedMaterial") -> dict[str, bool]:
     for texture_param in material.textures:
         for prefix in TRIPLANAR_PREFIXES:
             if texture_param.startswith(prefix):
-                auto_enabled["enable_triplanar_texture"] = True
+                auto_enabled["Enable_Triplanar_Texture"] = True
                 logger.debug(
-                    "Auto-enabled enable_triplanar_texture for material %s",
+                    "Auto-enabled Enable_Triplanar_Texture for material %s",
                     material.name
                 )
                 break
@@ -426,6 +429,14 @@ def _build_shader_parameters(
         r, g, b, a = material.colors[param]
         value = format_color(r, g, b, a)
         lines.append(f"shader_parameter/{param} = {value}")
+        
+    # Vector parameters (sorted for consistency)
+    if hasattr(material, 'vectors'):
+        for param in sorted(material.vectors.keys()):
+            x, y, z, w = material.vectors[param]
+            value = format_vector4(x, y, z, w)
+            lines.append(f"shader_parameter/{param} = {value}")
+
 
     return lines
 
@@ -641,6 +652,7 @@ if __name__ == "__main__":
         floats: dict[str, float] = field(default_factory=dict)
         bools: dict[str, bool] = field(default_factory=dict)
         colors: dict[str, tuple[float, float, float, float]] = field(default_factory=dict)
+        vectors: dict[str, tuple[float, float, float, float]] = field(default_factory=dict)
 
     # Example foliage material
     test_material = TestMappedMaterial(

@@ -392,88 +392,32 @@ TEXTURE_MAP_FOLIAGE: dict[str, str] = {
 # Polygon Shader (Props, Terrain, Characters, Triplanar)
 # This is the most comprehensive map as polygon handles many material types.
 TEXTURE_MAP_POLYGON: dict[str, str] = {
-    # Standard PBR textures
-    "_Base_Texture": "base_texture",
-    "_Normal_Texture": "normal_texture",
-    "_Emission_Texture": "emission_texture",
-    "_AO_Texture": "ao_texture",
-    # Triplanar textures (for terrain blending)
-    "_Triplanar_Texture_Top": "triplanar_texture_top",
-    "_Triplanar_Texture_Side": "triplanar_texture_side",
-    "_Triplanar_Texture_Bottom": "triplanar_texture_bottom",
-    # Alternative Unity property names (different packs use different names)
-    "_Albedo_Map": "base_texture",
-    "_BaseMap": "base_texture",
-    "_MainTex": "base_texture",
-    "_Texture": "base_texture",  # CustomCharacters shader (FantasyHero, ModularHero, etc.)
-    "_Normal_Map": "normal_texture",
-    "_BumpMap": "normal_texture",
-    "_Emission_Map": "emission_texture",
-    "_EmissionMap": "emission_texture",
-    "_OcclusionMap": "ao_texture",
-    "_Metallic_Smoothness_Texture": "metallic_texture",
-    "_MetallicGlossMap": "metallic_texture",
-    # Legacy names (older Unity conventions)
-    "_MainTexture": "base_texture",
-    "_Emission": "emission_texture",
-    # Character-specific textures (for hair/skin masks)
-    "_Hair_Mask": "hair_mask",
-    "_Skin_Mask": "skin_mask",
-    # Mask textures for Modular Fantasy Hero (15-zone color system)
-    "_Mask_01": "mask_01",
-    "_Mask_02": "mask_02",
-    "_Mask_03": "mask_03",
-    "_Mask_04": "mask_04",
-    "_Mask_05": "mask_05",
-    # Pro Racer pack
-    "_Metallic_Map": "metallic_texture",
-    # Grunge/Weathering overlay
-    "_Grunge_Map": "grunge_map",
-    # Blood overlay (Horror/Zombies packs)
-    "_Blood_Mask": "blood_mask",
-    "_Blood_Texture": "blood_texture",
-    # Magic runes (DarkFantasy pack)
-    "_Rune_Texture": "rune_texture",
-    # Interior Mapping (parallax fake interiors for windows)
-    "_Floor": "floor_texture",
-    "_Wall": "wall_texture",
-    "_Ceiling": "ceiling_texture",
-    "_Back": "back_texture",
-    "_Props": "props_texture",
-    # Screen/Monitor effects (SciFi packs)
-    "_Scan_Line_Map": "scan_line_map",
-    # Flipbook animation
-    "_LED_Mask_01": "led_mask",
-    # Cloth/Sail wind animation
-    "_Cloth_Mask": "cloth_mask",
-    # Overlay texture (auto-enables overlay feature when present)
-    "_Overlay_Texture": "overlay_texture",
-    # Triplanar normal and emission textures (auto-enable triplanar features)
-    "_Triplanar_Emission_Texture": "triplanar_emission_texture",
-    "_Triplanar_Normal_Texture_Bottom": "triplanar_normal_bottom",
-    "_Triplanar_Normal_Texture_Side": "triplanar_normal_side",
-    "_Triplanar_Normal_Texture_Top": "triplanar_normal_top",
-    # Legacy/alternative names for moss overlay
-    "_Moss": "overlay_texture",
-    "_MossTexture": "overlay_texture",
-    # Parallax/Height map (standard Unity PBR)
-    "_ParallaxMap": "height_texture",
-    "_HeightMap": "height_texture",
-    # Alpha/Cutout texture (transparency mask)
-    "_Alpha_Texture": "alpha_texture",
-    # Spherical/Matcap environment mapping
-    "_Spherical_Map": "spherical_map",
-    # Snow overlay textures (auto-enable snow feature when present)
-    "_Snow_Normal_Texture": "snow_normal_texture",
-    "_Snow_Metallic_Smoothness_Texture": "snow_metallic_smoothness",
-    "_Snow_Edge_Noise": "snow_edge_noise",
-    # LED/Screen effects (SciFi packs)
-    "_LED_Panel_Emissive_Wave_01": "led_emissive_wave",
-    "_Pixelation_Map": "pixelation_map",
-    # Detail textures
-    "_DetailAlbedoMap": "detail_albedo",
-    "_DetailNormalMap": "detail_normal",
-    "_DetailMask": "detail_mask",
+    "_Base_Texture": "Base_Texture",
+    "_Normal_Texture": "Normal_Texture",
+    "_Emission_Texture": "Emission_Texture",
+    "_AO_Texture": "AO_Texture",
+    "_Overlay_Texture": "Overlay_Texture",
+    "_Triplanar_Texture_Top": "Triplanar_Texture_Top",
+    "_Triplanar_Texture_Side": "Triplanar_Texture_Side",
+    "_Triplanar_Texture_Bottom": "Triplanar_Texture_Bottom",
+    "_Triplanar_Normal_Texture_Top": "Triplanar_Normal_Texture_Top",
+    "_Triplanar_Normal_Texture_Side": "Triplanar_Normal_Texture_Side",
+    "_Triplanar_Normal_Texture_Bottom": "Triplanar_Normal_Texture_Bottom",
+    "_Triplanar_Emission_Texture": "Triplanar_Emission_Texture",
+    "_Albedo_Map": "Base_Texture",
+    "_BaseMap": "Base_Texture",
+    "_MainTex": "Base_Texture",
+    "_Texture": "Base_Texture",
+    "_MainTexture": "Base_Texture",
+    "_Normal_Map": "Normal_Texture",
+    "_BumpMap": "Normal_Texture",
+    "_Emission_Map": "Emission_Texture",
+    "_EmissionMap": "Emission_Texture",
+    "_Emission": "Emission_Texture",
+    "_OcclusionMap": "AO_Texture",
+    "_Moss": "Overlay_Texture",
+    "_MossTexture": "Overlay_Texture",
+    "_Grunge_Map": "Overlay_Texture",
 }
 
 # Crystal Shader (Crystals, Glass, Gems)
@@ -504,36 +448,30 @@ TEXTURE_MAP_GLACIER: dict[str, str] = {
 # Water Shader (Rivers, Lakes, Oceans)
 # Water uses normal maps for surface ripples and caustics for underwater light.
 TEXTURE_MAP_WATER: dict[str, str] = {
-    "_Caustics_Flipbook": "caustics_flipbook",
-    # Foam textures (auto-enable foam features when present)
-    "_Foam_Noise_Texture": "noise_texture",
-    "_Foam_Texture": "noise_texture",  # Older naming convention
-    "_Foam_Texture1": "noise_texture",  # Goblin War Camp variant
-    "_FoamMask": "noise_texture",  # Foam masking (Goblin War Camp)
-    "_Noise_Texture": "noise_texture",  # Global foam noise texture
-    "_Normal_Map": "normal_texture",  # Alternative normal map name
-    "_Normal_Texture": "normal_texture",
-    "_Scrolling_Texture": "scrolling_texture",
-    "_Shore_Foam_Noise_Texture": "shore_foam_noise_texture",
-    "_Water_Normal_Texture": "normal_texture",  # Water normal texture
-    "_WaterNormal": "normal_texture",  # Older naming for water normal
-    "_WaterNormal1": "normal_texture",  # Secondary normal (Goblin War Camp)
-    "_WaterNormal2": "normal_texture",  # Tertiary normal (Goblin War Camp)
-    # Ripple normal maps (Goblin War Camp, Dwarven Dungeon)
-    "_RipplesNormal": "normal_texture",
-    "_RipplesNormal2": "normal_texture",
-    # Wave mask textures (Goblin War Camp)
-    "_WaveMask": "noise_texture",
-    "_WaveMaskTuff": "noise_texture",
-    "_WaveNoise": "noise_texture",
-    # Shore wave foam (separate from shore foam)
-    "_Shore_Wave_Foam_Noise_Texture": "shore_foam_noise_texture",
-    # Water noise/distortion textures
-    "_Water_Noise_Texture": "noise_texture",
-    # Standard Unity texture fallbacks
-    "_MainTex": "normal_texture",
-    "_BumpMap": "normal_texture",
-    "_BaseMap": "normal_texture",
+    "_Caustics_Flipbook": "_SampleTexture2D",
+    "_Foam_Noise_Texture": "_Noise_Texture",
+    "_Foam_Texture": "_Noise_Texture",
+    "_Foam_Texture1": "_Noise_Texture",
+    "_FoamMask": "_Noise_Texture",
+    "_Noise_Texture": "_Noise_Texture",
+    "_Normal_Map": "_Normal_Texture",
+    "_Normal_Texture": "_Normal_Texture",
+    "_Scrolling_Texture": "_Scrolling_Texture",
+    "_Shore_Foam_Noise_Texture": "_Shore_Foam_Noise_Texture",
+    "_Water_Normal_Texture": "_Normal_Texture",
+    "_WaterNormal": "_Normal_Texture",
+    "_WaterNormal1": "_Normal_Texture",
+    "_WaterNormal2": "_Normal_Texture",
+    "_RipplesNormal": "_Normal_Texture",
+    "_RipplesNormal2": "_Normal_Texture",
+    "_WaveMask": "_Noise_Texture",
+    "_WaveMaskTuff": "_Noise_Texture",
+    "_WaveNoise": "_Noise_Texture",
+    "_Shore_Wave_Foam_Noise_Texture": "_Shore_Foam_Noise_Texture",
+    "_Water_Noise_Texture": "_Noise_Texture",
+    "_MainTex": "_Normal_Texture",
+    "_BumpMap": "_Normal_Texture",
+    "_BaseMap": "_Normal_Texture",
 }
 
 # Particles Shader (Effects, Fog)
@@ -690,110 +628,57 @@ FLOAT_MAP_FOLIAGE: dict[str, str] = {
 }
 
 FLOAT_MAP_POLYGON: dict[str, str] = {
-    # Standard PBR properties
-    "_Smoothness": "smoothness",
-    "_Glossiness": "smoothness",
-    "_Metallic": "metallic",
-    "_Snow_Level": "snow_level",
-    "_Normal_Intensity": "normal_intensity",
-    "_Normal_Amount": "normal_intensity",
-    "_BumpScale": "normal_intensity",
-    "_AO_Intensity": "ao_intensity",
-    "_OcclusionStrength": "ao_intensity",
-    "_Alpha_Clip_Threshold": "alpha_clip_threshold",
-    "_Cutoff": "alpha_clip_threshold",
-    "_AlphaCutoff": "alpha_clip_threshold",
-    # Hologram effect (SciFi packs)
-    "_HoloLines": "holo_lines",
-    "_Scroll_Speed": "scroll_speed",
-    "_Opacity": "opacity",
-    "_Hologram_Intensity": "hologram_intensity",
-    # Screen/CRT effect (SciFiHorror)
-    "_Screen_Bulge": "screen_bulge",
-    "_Screen_Flicker_Frequency": "screen_flicker_frequency",
-    "_Vignette_Amount": "vignette_amount",
-    "_Pixelation_Amount": "pixelation_amount",
-    "_CRT_Curve": "crt_curve",
-    # Interior Mapping (fake room interiors for windows)
-    "_RoomTile": "room_tile",
-    "_RoomIntensity": "room_intensity",
-    "_WindowAlpha": "window_alpha",
-    "_RoomDepth": "room_depth",
-    # Ghost effect (Horror pack)
-    "_Transparency": "transparency",
-    "_RimPower": "rim_power",
-    "_TransShadow": "trans_shadow",
-    "_Ghost_Strength": "ghost_strength",
-    # Grunge/Weathering (Horror, Apocalypse)
-    "_Dirt_Amount": "dirt_amount",
-    "_Dust_Amount": "dust_amount",
-    "_Grunge_Intensity": "grunge_intensity",
-    # Magic effects (DarkFantasy)
-    "_Glow_Amount": "glow_amount",
-    "_Glow_Falloff": "glow_falloff",
-    "_dissolve": "dissolve",
-    "_twirlstr": "twirl_strength",
-    "_Rune_Speed": "rune_speed",
-    # Liquid/Potion (DarkFantasy)
-    "_liquidamount": "liquid_amount",
-    "_WobbleX": "wobble_x",
-    "_WobbleZ": "wobble_z",
-    "_Wave_Scale": "wave_scale",
-    "_Foam_Line": "foam_line",
-    "_Rim_Width": "rim_width",
-    # Blood overlay (Zombies)
-    "_BloodAmount": "blood_amount",
-    "_Blood_Intensity": "blood_intensity",
-    # LED/Neon effects (CyberCity)
-    "_Brightness": "brightness",
-    "_UVScrollSpeed": "uv_scroll_speed",
-    "_Saturation": "saturation",
-    "_Neon_Intensity": "neon_intensity",
-    "_Pulse_Speed": "pulse_speed",
-    # Cloth/Sail animation
-    "_Wave_Speed": "wave_speed",
-    "_Wave_Amplitude": "wave_amplitude",
-    "_Wind_Influence": "wind_influence",
-    # Character (Modular Fantasy Hero)
-    "_BodyArt_Amount": "bodyart_amount",
-    "_Tattoo_Amount": "tattoo_amount",
-    # Racing (ProRacer)
-    "_Flipbook_Width": "flipbook_width",
-    "_Flipbook_Height": "flipbook_height",
-    "_Flipbook_Speed": "flipbook_speed",
-    # Heat Shimmer (AridDesert)
-    "_Distortion_strength": "distortion_strength",
-    "_Edge_Distortion_Intensity": "edge_distortion_intensity",
-    "_Speed_X": "speed_x",
-    "_Speed_Y": "speed_y",
-    # Snow overlay properties
-    "_Snow_Level": "snow_level",
-    "_Snow_Transition": "snow_transition",
-    "_Snow_Metallic": "snow_metallic",
-    "_Snow_Smoothness": "snow_smoothness",
-    "_Snow_Normal_Intensity": "snow_normal_intensity",
-    # Triplanar properties
-    "_Triplanar_Fade": "triplanar_fade",
-    "_Triplanar_Intensity": "triplanar_intensity",
-    "_Triplanar_Normal_Intensity_Top": "triplanar_normal_intensity_top",
-    "_Triplanar_Normal_Intensity_Side": "triplanar_normal_intensity_side",
-    "_Triplanar_Normal_Intensity_Bottom": "triplanar_normal_intensity_bottom",
-    # Emission intensity
-    "_Emission_Intensity": "emission_intensity",
-    # Detail texture properties
-    "_DetailNormalMapScale": "detail_normal_scale",
-    "_Snow_Angle_Threshold": "snow_angle_threshold",
-    "_Snow_Noise_Fade": "snow_noise_fade",
-    "_Snow_Noise_Top_To_Side_Difference": "snow_noise_top_to_side_difference",
-    "_Snow_Normal_Fade": "snow_normal_fade",
-    "_Snow_Transition_Threshold": "snow_transition_threshold",
-    "_Snow_Transition_Threshold_Step_Count": "snow_transition_threshold_step_count",
-    "_Wave_Scale": "wave_scale",
-    "_Wave_Speed": "wave_speed",
-    "_Wave_Object_Offset": "wave_object_offset",
-    "_Fade_Wave_Scale": "fade_wave_scale",
-    "_Fade_Wave_To_Object_Origin": "fade_wave_to_object_origin",
-    "_Fade_Wave_Vertical_Offset": "fade_wave_vertical_offset",
+    "_Smoothness": "Smoothness",
+    "_Glossiness": "Smoothness",
+    "_Metallic": "Metallic",
+    "_Normal_Intensity": "Normal_Intensity",
+    "_Normal_Amount": "Normal_Intensity",
+    "_BumpScale": "Normal_Intensity",
+    "_AO_Intensity": "AO_Intensity",
+    "_OcclusionStrength": "AO_Intensity",
+    "_Overlay_Intensity": "Overlay_Intensity",
+    "_Grunge_Intensity": "Overlay_Intensity",
+    "_Dirt_Amount": "Overlay_Intensity",
+    "_Dust_Amount": "Overlay_Intensity",
+    "_Snow_Level": "Snow_Level",
+    "_Snow_Transition": "Snow_Transition",
+    "_Snow_Metallic": "Snow_Metallic",
+    "_Snow_Smoothness": "Snow_Smoothness",
+    "_Snow_Angle_Threshold": "Snow_Angle_Threshold",
+    "_Snow_Transition_Threshold": "Snow_Transition_Threshold",
+    "_Snow_Transition_Threshold_Step_Count": "Snow_Transition_Threshold_Step_Count",
+    "_Triplanar_Fade": "Triplanar_Fade",
+    "_Triplanar_Intensity": "Triplanar_Intensity",
+    "_Triplanar_Top_To_Side_Difference": "Triplanar_Top_To_Side_Difference",
+    "_Top_Metallic": "Top_Metallic",
+    "_Side_Metallic": "Side_Metallic",
+    "_Bottom_Metallic": "Bottom_Metallic",
+    "_Top_Smoothness": "Top_Smoothness",
+    "_Side_Smoothness": "Side_Smoothness",
+    "_Bottom_Smoothness": "Bottom_Smoothness",
+    "_Triplanar_Normal_Intensity_Top": "Triplanar_Normal_Intensity_Top",
+    "_Triplanar_Normal_Intensity_Side": "Triplanar_Normal_Intensity_Side",
+    "_Triplanar_Normal_Intensity_Bottom": "Triplanar_Normal_Intensity_Bottom",
+    "_Triplanar_Normal_Top_To_Side_Difference": "Triplanar_Normal_Top_To_Side_Difference",
+    "_Triplanar_Normal_Fade": "Triplanar_Normal_Fade",
+    "_Triplanar_Emission_Tiling": "Triplanar_Emission_Tiling",
+    "_Triplanar_Emission_Blend": "Triplanar_Emission_Blend",
+    "_Triplanar_Emission_Intensity": "Triplanar_Emission_Intensity",
+    "_Wave_Scale": "Wave_Scale",
+    "_Wave_Speed": "Wave_Speed",
+    "_Wave_Object_Offset": "Wave_Object_Offset",
+    "_Triplanar_Use_World_Space": "Triplanar_Use_World_Space",
+    "_Enable_Triplanar_Texture": "Enable_Triplanar_Texture",
+    "_Enable_Triplanar_Normals": "Enable_Triplanar_Normals",
+    "_Enable_Triplanar_Emission": "Enable_Triplanar_Emission",
+    "_Enable_Snow": "Enable_Snow",
+    "_Snow_Use_World_Up": "Snow_Use_World_Up",
+    "_Snow_Transition_Threshold_Steps": "Snow_Transition_Threshold_Steps",
+    "_Snow_Overrides_Normals": "Snow_Overrides_Normals",
+    "_Enable_Ambient_Occlusion": "Enable_Ambient_Occlusion",
+    "_Generate_From_Base_Normals": "Generate_From_Base_Normals",
+    "_Enable_Wave": "Enable_Wave",
+    "_Enable_AO": "Enable_Ambient_Occlusion",
 }
 
 FLOAT_MAP_CRYSTAL: dict[str, str] = {
@@ -844,41 +729,36 @@ FLOAT_MAP_GLACIER: dict[str, str] = {
 }
 
 FLOAT_MAP_WATER: dict[str, str] = {
-    "_Smoothness": "smoothness",
-    "_Glossiness": "smoothness",  # Alternative name
-    "_Metallic": "metallic",
-    "_Base_Opacity": "base_opacity",
-    "_Shallows_Opacity": "shallows_opacity",
-    "_Maximum_Depth": "maximum_depth",
-    "_Normal_Intensity": "normal_intensity",
-    "_BumpScale": "normal_intensity",  # Alternative name
-    "_Shore_Wave_Speed": "shore_wave_speed",
-    "_Ocean_Wave_Height": "ocean_wave_height",
-    "_Ocean_Wave_Speed": "ocean_wave_speed",
-    "_Distortion_Strength": "distortion_strength",
-    # Depth properties
-    "_Deep_Height": "deep_height",
-    "_Very_Deep_Height": "very_deep_height",
-    "_Depth_Distance": "depth_distance",
-    "_Water_Depth": "water_depth",
-    # Depth falloff controls (Goblin War Camp, Dwarven Dungeon)
-    "_ShallowFalloff": "shallow_intensity",
-    "_OverallFalloff": "base_opacity",
-    "_OpacityFalloff": "shallows_opacity",
-    # Foam properties
-    "_Shore_Foam_Intensity": "shore_foam_intensity",
-    "_FoamShoreline": "shore_foam_intensity",  # Goblin War Camp variant
-    "_FoamDepth": "shore_foam_intensity",  # Foam depth threshold
-    "_FoamFalloff": "ocean_foam_opacity",  # Foam fade control
-    # Caustics properties
-    "_Caustics_Intensity": "caustics_intensity",
-    "_CausticDepthFade": "caustics_intensity",  # Depth-based caustic fade
-    "_CausticScale": "caustics_scale",  # Caustic pattern scale
-    "_CausticSpeed": "caustics_speed",  # Caustic animation speed
-    "_Shallow_Intensity": "shallow_intensity",
-    # Waterfall (ElvenRealm)
-    "_FresnelPower": "fresnel_power",
-    "_UVScrollSpeed": "uv_scroll_speed",
+    "_Smoothness": "_Smoothness",
+    "_Glossiness": "_Smoothness",
+    "_Metallic": "_Metallic",
+    "_Base_Opacity": "_Base_Opacity",
+    "_Shallows_Opacity": "_Shallows_Opacity",
+    "_Maximum_Depth": "_Deep_Height", 
+    "_Normal_Intensity": "_Normal_Intensity",
+    "_BumpScale": "_Normal_Intensity",
+    "_Shore_Wave_Speed": "_Shore_Wave_Speed",
+    "_Ocean_Wave_Height": "_Ocean_Wave_Height",
+    "_Ocean_Wave_Speed": "_Ocean_Wave_Speed",
+    "_Distortion_Strength": "_Distortion_Strength",
+    "_Deep_Height": "_Deep_Height",
+    "_Very_Deep_Height": "_Very_Deep_Height",
+    "_Depth_Distance": "_Fade_Distance",
+    "_Water_Depth": "_Deep_Height",
+    "_ShallowFalloff": "_Shallows_Opacity",
+    "_OverallFalloff": "_Base_Opacity",
+    "_OpacityFalloff": "_Shallows_Opacity",
+    "_Shore_Foam_Intensity": "_Shore_Small_Foam_Opacity",
+    "_FoamShoreline": "_Shore_Edge_Opacity",
+    "_FoamDepth": "_Shore_Small_Foam_Opacity",
+    "_FoamFalloff": "_Ocean_Foam_Opacity",
+    "_Caustics_Intensity": "_Caustics_Intensity",
+    "_CausticDepthFade": "_Caustics_Intensity",
+    "_CausticScale": "_Caustics_Scale",
+    "_CausticSpeed": "_Caustics_Speed",
+    "_Shallow_Intensity": "_Shallows_Opacity",
+    "_FresnelPower": "_Fade_Power",
+    "_UVScrollSpeed": "_Distortion_Speed",
 }
 
 FLOAT_MAP_PARTICLES: dict[str, str] = {
@@ -970,55 +850,42 @@ COLOR_MAP_FOLIAGE: dict[str, str] = {
 }
 
 COLOR_MAP_POLYGON: dict[str, str] = {
-    # Base color/tint
-    "_Color_Tint": "color_tint",
-    "_ColorTint": "color_tint",  # Synty's most common form (no underscore)
-    "_Color": "color_tint",
-    "_BaseColor": "color_tint",
-    "_BaseColour": "color_tint",
-    # Emission — polygon.gdshader's uniform is `emission_color_tint`,
-    # not `emission_color`. Writing the wrong shader_parameter name causes
-    # Godot to fall back to the shader's built-in default (vec4(1.0) / full
-    # white emission), which makes any material with an emission texture
-    # glow pure white regardless of the Unity _EmissionColor value.
-    "_Emission_Color": "emission_color_tint",
-    "_EmissionColor": "emission_color_tint",
-    # Snow overlay
-    "_Snow_Color": "snow_color",
-    # Character colors (hair/skin)
-    "_Hair_Color": "hair_color",
-    "_Skin_Color": "skin_color",
-    # Hologram/Neon (SciFi packs)
-    "_Neon_Colour_01": "neon_color_01",
-    "_Neon_Colour_02": "neon_color_02",
-    "_Hologram_Color": "hologram_color",
-    # Ghost effect (Horror)
-    "_RimColor": "rim_color",
-    # Grunge/Dust
-    "_Dust_Colour": "dust_color",
-    # Magic effects (DarkFantasy)
-    "_Glow_Colour": "glow_color",
-    "_Glow_Tint": "glow_tint",
-    # Liquid/Potion
-    "_Liquid_Color": "liquid_color",
-    # Blood (Zombies)
-    "_BloodColor": "blood_color",
-    "_Blood_Color": "blood_color",
-    # Character (Modular Fantasy Hero - 15-zone color system)
-    "_Color_Primary": "color_primary",
-    "_Color_Secondary": "color_secondary",
-    "_Color_Tertiary": "color_tertiary",
-    "_Color_Metal_Primary": "color_metal_primary",
-    "_Color_Metal_Secondary": "color_metal_secondary",
-    "_Color_Metal_Dark": "color_metal_dark",
-    "_Color_Leather_Primary": "color_leather_primary",
-    "_Color_Leather_Secondary": "color_leather_secondary",
-    "_Color_Skin": "color_skin",
-    "_Color_Hair": "color_hair",
-    "_Color_Eyes": "color_eyes",
-    "_Color_Stubble": "color_stubble",
-    "_Color_Scar": "color_scar",
-    "_Color_BodyArt": "color_bodyart",
+    "_Color_Tint": "Color_Tint",
+    "_ColorTint": "Color_Tint", 
+    "_Color": "Color_Tint",
+    "_BaseColor": "Color_Tint",
+    "_BaseColour": "Color_Tint",
+    "_Emission_Color": "Emission_Color_Tint",
+    "_EmissionColor": "Emission_Color_Tint",
+    "_Emission_Color_Tint": "Emission_Color_Tint",
+    "_Triplanar_Emission_Color_Tint": "Triplanar_Emission_Color_Tint",
+    "_Snow_Color": "Snow_Color",
+}
+
+VECTOR_MAP_POLYGON: dict[str, str] = {
+    "_Base_Tiling": "Base_Tiling",
+    "_Base_Offset": "Base_Offset",
+    "_Overlay_Tiling": "Overlay_Tiling",
+    "_Overlay_Offset": "Overlay_Offset",
+    "_Normal_Tiling": "Normal_Tiling",
+    "_Normal_Offset": "Normal_Offset",
+    "_Emission_Tiling": "Emission_Tiling",
+    "_Emission_Offset": "Emission_Offset",
+    "_AO_Tiling": "AO_Tiling",
+    "_AO_Offset": "AO_Offset",
+    "_UVPan": "UVPan",
+    "_Triplanar_Tiling_Top": "Triplanar_Tiling_Top",
+    "_Triplanar_Tiling_Side": "Triplanar_Tiling_Side",
+    "_Triplanar_Tiling_Bottom": "Triplanar_Tiling_Bottom",
+    "_Triplanar_Offset_Top": "Triplanar_Offset_Top",
+    "_Triplanar_Offset_Side": "Triplanar_Offset_Side",
+    "_Triplanar_Offset_Bottom": "Triplanar_Offset_Bottom",
+    "_Triplanar_Normal_Tiling_Top": "Triplanar_Normal_Tiling_Top",
+    "_Triplanar_Normal_Tiling_Side": "Triplanar_Normal_Tiling_Side",
+    "_Triplanar_Normal_Tiling_Bottom": "Triplanar_Normal_Tiling_Bottom",
+    "_Triplanar_Normal_Offset_Top": "Triplanar_Normal_Offset_Top",
+    "_Triplanar_Normal_Offset_Side": "Triplanar_Normal_Offset_Side",
+    "_Triplanar_Normal_Offset_Bottom": "Triplanar_Normal_Offset_Bottom",
 }
 
 COLOR_MAP_CRYSTAL: dict[str, str] = {
@@ -1048,37 +915,30 @@ COLOR_MAP_GLACIER: dict[str, str] = {
 }
 
 COLOR_MAP_WATER: dict[str, str] = {
-    # Depth-based colors (core water appearance)
-    "_Shallow_Color": "shallow_color",
-    "_Deep_Color": "deep_color",
-    "_Very_Deep_Color": "very_deep_color",
-    # British spelling variants (Goblin War Camp, Dwarven Dungeon)
-    "_ShallowColour": "shallow_color",
-    "_DeepColour": "deep_color",
-    "_VeryDeepColour": "very_deep_color",
-    # Foam and effects
-    "_Foam_Color": "foam_color",
-    "_Caustics_Color": "caustics_color",
-    "_CausticColour": "caustics_color",  # British spelling variant
-    "_Shore_Foam_Color_Tint": "shore_foam_color_tint",
-    "_Shore_Wave_Color_Tint": "shore_wave_color_tint",
-    # Glow/emission colors (Goblin War Camp, Dwarven Dungeon)
-    "_FoamEmitColour": "shore_foam_color_tint",  # Foam emission color
-    "_DepthGlowColour": "very_deep_color",  # Deep water glow
-    # Base/Tint colors
-    "_Color": "color_tint",
-    "_Color_Tint": "color_tint",
-    "_BaseColor": "color_tint",
-    # Legacy property names (older packs)
-    "_WaterDeepColor": "deep_color",
-    "_WaterShallowColor": "shallow_color",
-    "_Water_Deep_Color": "deep_color",
-    "_Water_Shallow_Color": "shallow_color",
-    "_Water_Near_Color": "shallow_color",
-    "_Water_Far_Color": "deep_color",
-    # Waterfall (ElvenRealm)
-    "_WaterColour": "water_color",
-    "_FresnelColour": "fresnel_color",
+    "_Shallow_Color": "_Shallow_Color",
+    "_Deep_Color": "_Deep_Color",
+    "_Very_Deep_Color": "_Very_Deep_Color",
+    "_ShallowColour": "_Shallow_Color",
+    "_DeepColour": "_Deep_Color",
+    "_VeryDeepColour": "_Very_Deep_Color",
+    "_Foam_Color": "_Foam_Color",
+    "_Caustics_Color": "_Caustics_Color",
+    "_CausticColour": "_Caustics_Color",
+    "_Shore_Foam_Color_Tint": "_Shore_Foam_Color_Tint",
+    "_Shore_Wave_Color_Tint": "_Shore_Wave_Color_Tint",
+    "_FoamEmitColour": "_Shore_Foam_Color_Tint",
+    "_DepthGlowColour": "_Very_Deep_Color",
+    "_Color": "_Shallow_Color",
+    "_Color_Tint": "_Shallow_Color",
+    "_BaseColor": "_Shallow_Color",
+    "_WaterDeepColor": "_Deep_Color",
+    "_WaterShallowColor": "_Shallow_Color",
+    "_Water_Deep_Color": "_Deep_Color",
+    "_Water_Shallow_Color": "_Shallow_Color",
+    "_Water_Near_Color": "_Shallow_Color",
+    "_Water_Far_Color": "_Deep_Color",
+    "_WaterColour": "_Shallow_Color",
+    "_FresnelColour": "_Shore_Wave_Color_Tint",
 }
 
 COLOR_MAP_PARTICLES: dict[str, str] = {
@@ -1289,8 +1149,6 @@ BOOLEAN_FLOAT_PROPERTIES: set[str] = {
     # Polygon effect toggles
     "_Enable_Triplanar_Texture",
     "_Enable_Snow",
-    "_Enable_Emission",
-    "_Enable_Normals",
     "_AlphaClip",
     "_Enable_Hologram",
     "_Enable_Ghost",
@@ -1338,6 +1196,18 @@ BOOLEAN_FLOAT_PROPERTIES: set[str] = {
     "_Snow_Transition_Threshold_Steps",
     "_Snow_Use_World_Up",
     "_Inner_Distortion",
+    # triplanar
+    "_Triplanar_Use_World_Space",
+    "_Enable_Triplanar_Texture",
+    "_Enable_Triplanar_Normals",
+    "_Enable_Triplanar_Emission",
+    "_Enable_Snow",
+    "_Snow_Use_World_Up",
+    "_Snow_Transition_Threshold_Steps",
+    "_Snow_Overrides_Normals",
+    "_Enable_Ambient_Occlusion",
+    "_Generate_From_Base_Normals",
+    "_Enable_Wave",
 }
 
 # =============================================================================
@@ -1384,8 +1254,8 @@ SHADER_DEFAULTS: dict[str, dict[str, float | bool]] = {
     },
     "polygon.gdshader": {
         # Middle-ground defaults for general props
-        "smoothness": 0.5,
-        "metallic": 0.0,
+        "_Smoothness": 0.5,
+        "_Metallic": 0.0,
     },
 }
 
@@ -1521,6 +1391,7 @@ class MappedMaterial:
     floats: dict[str, float] = field(default_factory=dict)
     bools: dict[str, bool] = field(default_factory=dict)
     colors: dict[str, tuple[float, float, float, float]] = field(default_factory=dict)
+    vectors: dict[str, tuple[float, float, float, float]] = field(default_factory=dict)
 
 
 # =============================================================================
@@ -2141,12 +2012,14 @@ def map_material(
     texture_map = TEXTURE_MAPS.get(shader_file, {})
     float_map = FLOAT_MAPS.get(shader_file, {})
     color_map = COLOR_MAPS.get(shader_file, {})
+    vector_map = VECTOR_MAP_POLYGON if shader_file == "polygon.gdshader" else {}
 
     # Also include polygon maps as fallback for all shaders (common properties)
     if shader_file != "polygon.gdshader":
         texture_map = {**TEXTURE_MAP_POLYGON, **texture_map}
         float_map = {**FLOAT_MAP_POLYGON, **float_map}
         color_map = {**COLOR_MAP_POLYGON, **color_map}
+        vector_map = {**VECTOR_MAP_POLYGON, **vector_map}
 
     # Step 3: Map textures
     mapped_textures: dict[str, str] = {}
@@ -2168,11 +2041,16 @@ def map_material(
 
     # Step 5: Map colors (with alpha fix, but preserve alpha for transparent materials)
     mapped_colors: dict[str, tuple[float, float, float, float]] = {}
+    mapped_vectors: dict[str, tuple[float, float, float, float]] = {}
+    
     for unity_name, color in material.colors.items():
         if unity_name in color_map:
             godot_name = color_map[unity_name]
             fixed_color = _fix_alpha_zero(color, unity_name, material.floats)
             mapped_colors[godot_name] = fixed_color.as_tuple()
+        elif unity_name in vector_map:
+            godot_name = vector_map[unity_name]
+            mapped_vectors[godot_name] = color.as_tuple()
 
     # Create mapped material
     result = MappedMaterial(
@@ -2182,6 +2060,7 @@ def map_material(
         floats=mapped_floats,
         bools=mapped_bools,
         colors=mapped_colors,
+        vectors=mapped_vectors,
     )
 
     # Step 6: Apply defaults

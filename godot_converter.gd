@@ -48,6 +48,8 @@ var mesh_to_materials: Dictionary = {}
 ## @type Dictionary[String, bool]
 var saved_mesh_names: Dictionary = {}
 
+var prefab_mapping: Dictionary = {}
+
 ## Counter for successfully converted and saved meshes.
 var meshes_saved: int = 0
 
@@ -301,6 +303,8 @@ func process_pack_folder(pack_folder: String) -> void:
 		var fbx_path := fbx_files[i]
 		print("[%d/%d] Processing: %s" % [i + 1, total_fbx, fbx_path.get_file()])
 		process_fbx_file(fbx_path)
+	load_prefab_mapping(pack_folder)
+	build_prefabs()
 
 
 ## Loads the mesh-to-material mapping from JSON file.
@@ -1097,7 +1101,7 @@ func find_material_path(mat_name: String, materials_dir: String) -> String:
 	# FileAccess.file_exists() has known issues with resource paths, especially:
 	# - During headless execution in _init()
 	# - With .remap files created by Godot's import system
-	if ResourceLoader.exists(base_path):
+	if FileAccess.file_exists(base_path):
 		return base_path
 
 	# 2. Strip Polygon*_Mat_ or Polygon*_ prefix
@@ -1106,7 +1110,7 @@ func find_material_path(mat_name: String, materials_dir: String) -> String:
 		# Try to find _Mat_ first (e.g., PolygonFantasyKingdom_Mat_Glass -> Glass)
 		var mat_idx := stripped.find("_Mat_")
 		if mat_idx > 0:
-			stripped = stripped.substr(mat_idx + 5)  # len("_Mat_") = 5
+			stripped = stripped.substr(mat_idx + 5) 
 		else:
 			# Try just first underscore after Polygon prefix (e.g., PolygonNature_Tree -> Tree)
 			var first_underscore := stripped.find("_")
@@ -1115,13 +1119,13 @@ func find_material_path(mat_name: String, materials_dir: String) -> String:
 
 	# 3. Try stripped name
 	var stripped_path := materials_dir.path_join(stripped + ".tres")
-	if ResourceLoader.exists(stripped_path):
+	if FileAccess.file_exists(stripped_path):
 		return stripped_path
 
 	# 4. Try with _01 suffix if not already present
 	if not stripped.ends_with("_01"):
 		var with_suffix_path := materials_dir.path_join(stripped + "_01.tres")
-		if ResourceLoader.exists(with_suffix_path):
+		if FileAccess.file_exists(with_suffix_path):
 			return with_suffix_path
 
 	# 5. Try keyword matching (handles cases like Crystal_Mat_01 -> Synty_Crystal)
@@ -1285,41 +1289,15 @@ func _get_or_create_material(mat_name: String, mesh_name: String, materials_dir:
 
 	var material: Material = null
 	
-	var search_string = (lookup_name + " " + mesh_name + " " + fbx_name).to_lower()
+	var material_path := find_material_path(lookup_name, materials_dir)
+	if not material_path.is_empty():
+		material = load(material_path)
 
-	if "water" in search_string or "river" in search_string or "lake" in search_string or "ice" in search_string:
-		var sm = ShaderMaterial.new()
-		sm.shader = load("res://shaders/water.gdshader")
-		if sm.shader != null:
-			sm.set_shader_parameter("deep_color", Color(0.209, 0.509, 0.497, 1.0))
-			sm.set_shader_parameter("shallow_color", Color(0.332, 0.723, 0.792, 1.0))
-			sm.set_shader_parameter("beers_law", 0.697)
-		print("      Forced custom Water shader for: %s (from FBX: %s)" % [lookup_name, fbx_name])
-		material = sm
-
-	elif "cloud" in search_string or "fog" in search_string or "aurora" in search_string:
-		var sm = ShaderMaterial.new()
-		sm.shader = load("res://shaders/clouds.gdshader")
-		print("      Forced custom Cloud/Aurora shader for: %s (from FBX: %s)" % [lookup_name, fbx_name])
-		material = sm
-
-	elif "cutout" in search_string or "leaf" in search_string or "grass" in search_string:
-		var std = StandardMaterial3D.new()
-		std.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
-		std.alpha_scissor_threshold = 0.5
-		print("      Forced Alpha Scissor for: %s (from FBX: %s)" % [lookup_name, fbx_name])
-		material = std
-
-	elif "glass" in search_string or "crystal" in search_string:
-		var sm = ShaderMaterial.new()
-		sm.shader = load("res://shaders/crystal.gdshader")
-		print("      Forced Crystal/Glass shader for: %s (from FBX: %s)" % [lookup_name, fbx_name])
-		material = sm
-
-	if material == null:
-		var material_path := find_material_path(lookup_name, materials_dir)
-		if not material_path.is_empty():
-			material = load(material_path)
+	if material == null and not default_material_name.is_empty():
+		var def_path := find_material_path(default_material_name, materials_dir)
+		if not def_path.is_empty():
+			material = load(def_path)
+			print("      Forced default pack material for: %s" % lookup_name)
 
 	if material == null:
 		var fallback = ShaderMaterial.new()
@@ -1330,3 +1308,140 @@ func _get_or_create_material(mat_name: String, mesh_name: String, materials_dir:
 	_material_cache[cache_key] = material
 	
 	return material
+
+func _apply_prefab_materials(mesh_instance: MeshInstance3D, mat_names: Array, materials_dir: String, prefab_name: String) -> void:
+	if mesh_instance.mesh == null:
+		return
+	
+	for i in range(mesh_instance.mesh.get_surface_count()):
+		var mat_name = ""
+		if i < mat_names.size():
+			mat_name = mat_names[i]
+			
+		if mat_name.is_empty():
+			continue
+			
+		var material = _get_or_create_material(mat_name, mesh_instance.name, materials_dir, prefab_name)
+		if material != null:
+			mesh_instance.set_surface_override_material(i, material)
+
+func build_prefabs() -> void:
+	if prefab_mapping.is_empty():
+		return
+
+	print("Building %d Prefabs..." % prefab_mapping.size())
+	var prefabs_dir := current_pack_folder + "/prefabs/"
+	_ensure_directory_exists(prefabs_dir)
+	var materials_dir := current_pack_folder + "/materials"
+
+	var prefabs_created = 0
+	var missing_meshes = 0
+
+	for prefab_name in prefab_mapping.keys():
+		var mesh_data_list: Array = prefab_mapping[prefab_name]
+		if mesh_data_list.is_empty():
+			continue
+
+		var root := Node3D.new()
+		root.name = prefab_name
+		var has_valid_mesh = false
+
+		for mesh_data in mesh_data_list:
+			if not mesh_data is Dictionary:
+				continue
+				
+			var m_name: String = mesh_data.get("mesh_name", "")
+			var m_materials: Array = mesh_data.get("materials", [])
+			
+			if m_name.is_empty():
+				continue
+
+			var mesh_path = _find_saved_mesh_path(m_name)
+			
+			if mesh_path == "":
+				printerr("CRITICAL ERROR: Failed to find Godot base mesh for Prefab '%s'. Searched for: '%s'" % [prefab_name, m_name])
+				missing_meshes += 1
+				continue
+
+			var mesh_scene = load(mesh_path)
+			if mesh_scene == null:
+				printerr("CRITICAL ERROR: Found mesh path but failed to load it: %s" % mesh_path)
+				continue
+				
+			var instance = null
+			if mesh_scene is PackedScene:
+				instance = mesh_scene.instantiate()
+			elif mesh_scene is ArrayMesh:
+				instance = MeshInstance3D.new()
+				instance.mesh = mesh_scene
+				instance.name = m_name
+				
+			if instance == null:
+				continue
+
+			# Apply context-aware material overrides strictly based on the prefab mapping
+			if instance is MeshInstance3D:
+				_apply_prefab_materials(instance, m_materials, materials_dir, prefab_name)
+			else:
+				var mesh_instances = find_mesh_instances(instance)
+				for mi in mesh_instances:
+					_apply_prefab_materials(mi, m_materials, materials_dir, prefab_name)
+
+			root.add_child(instance)
+			_set_owner_recursive(instance, root)
+			has_valid_mesh = true
+
+		if has_valid_mesh:
+			var scene := PackedScene.new()
+			scene.pack(root)
+			var save_err = ResourceSaver.save(scene, prefabs_dir + prefab_name + ".tscn")
+			if save_err == OK:
+				prefabs_created += 1
+			else:
+				printerr("CRITICAL ERROR: Failed to save prefab scene: %s" % prefab_name)
+
+		root.free()
+
+	print("Created %d assembled Prefab scenes. Missed %d base meshes." % [prefabs_created, missing_meshes])
+	
+func load_prefab_mapping(pack_folder: String) -> void:
+	var mapping_path := pack_folder + "/prefab_mapping.json"
+	if FileAccess.file_exists(mapping_path):
+		var file := FileAccess.open(mapping_path, FileAccess.READ)
+		var json := JSON.new()
+		if json.parse(file.get_as_text()) == OK:
+			prefab_mapping = json.get_data()
+			print("  Loaded prefab mapping with %d entries" % prefab_mapping.size())
+		else:
+			printerr("  Failed to parse prefab_mapping.json")
+
+func _find_saved_mesh_path(target_name: String) -> String:
+	# 1. Try exact match first on basename
+	for saved_path in saved_mesh_names.keys():
+		if saved_path.get_file().get_basename() == target_name:
+			return saved_path
+			
+	# 2. Aggressive suffix stripping for comparison
+	var target_stripped = _strip_numeric_suffix(target_name).to_lower().replace("_static", "")
+	
+	var best_path = ""
+	var best_distance = 999
+	
+	for saved_path in saved_mesh_names.keys():
+		var saved_basename = saved_path.get_file().get_basename()
+		var saved_stripped = _strip_numeric_suffix(saved_basename).to_lower().replace("_static", "")
+		
+		# Direct containment / prefix match
+		if saved_stripped.begins_with(target_stripped) or target_stripped.begins_with(saved_stripped):
+			return saved_path
+			
+		# Levenshtein distance fuzzy match
+		var dist = _levenshtein_distance(target_stripped, saved_stripped)
+		if dist < best_distance:
+			best_distance = dist
+			best_path = saved_path
+			
+	if best_distance <= 3 and best_path != "":
+		return best_path
+		
+	return ""
